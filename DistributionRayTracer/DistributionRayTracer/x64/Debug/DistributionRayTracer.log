@@ -1,0 +1,37 @@
+﻿  main.cpp
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\maths.h(81,8): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'main.cpp')
+  
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\color.h(42,14): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'main.cpp')
+  
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\color.h(41,14): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'main.cpp')
+  
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\color.h(40,28): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'main.cpp')
+  
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(108,65): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(101,11): warning C4101: 't': unreferenced local variable
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(146,29): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(199,20): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(220,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(221,24): warning C4018: '<': signed/unsigned mismatch
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(222,24): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(223,24): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(231,35): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(266,33): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(315,16): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(140,11): warning C4101: 't': unreferenced local variable
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(558,27): warning C4244: 'argument': conversion from 'time_t' to 'const int', possible loss of data
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(567,13): warning C4849: OpenMP 'collapse' clause ignored in 'parallel for' directive
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(578,25): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(579,25): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(600,31): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(602,31): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(604,31): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(620,13): warning C4849: OpenMP 'collapse' clause ignored in 'parallel for' directive
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(642,24): warning C4018: '<': signed/unsigned mismatch
+C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\DistributionRayTracer\main.cpp(654,18): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  DistributionRayTracer.vcxproj -> C:\Users\jap\LAB 3D\P3D_CPU_RT_Template\x64\Debug\DistributionRayTracer.exe
+  0 File(s) copied

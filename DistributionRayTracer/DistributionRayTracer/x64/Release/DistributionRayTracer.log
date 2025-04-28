@@ -1,0 +1,168 @@
+﻿  boundingBox.cpp
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\boundingBox.cpp(85,10): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\boundingBox.cpp(95,10): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\boundingBox.cpp(105,10): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\boundingBox.cpp(121,10): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+  bvh.cpp
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\maths.h(81,8): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'bvh.cpp')
+  
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\color.h(42,14): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'bvh.cpp')
+  
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\color.h(41,14): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'bvh.cpp')
+  
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\color.h(40,28): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'bvh.cpp')
+  
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\bvh.cpp(24,47): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\bvh.cpp(40,24): warning C4305: '-=': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\bvh.cpp(40,53): warning C4305: '-=': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\bvh.cpp(40,82): warning C4305: '-=': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\bvh.cpp(41,24): warning C4305: '+=': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\bvh.cpp(41,53): warning C4305: '+=': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\bvh.cpp(41,82): warning C4305: '+=': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\bvh.cpp(44,35): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\bvh.cpp(58,10): warning C4101: 'tmp': unreferenced local variable
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\bvh.cpp(72,10): warning C4101: 'tmp': unreferenced local variable
+  grid.cpp
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\maths.h(81,8): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'grid.cpp')
+  
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\color.h(42,14): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'grid.cpp')
+  
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\color.h(41,14): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'grid.cpp')
+  
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\color.h(40,28): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'grid.cpp')
+  
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(9,21): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(49,21): warning C4305: '-=': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(49,49): warning C4305: '-=': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(49,77): warning C4305: '-=': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(50,21): warning C4305: '+=': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(50,49): warning C4305: '+=': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(50,77): warning C4305: '+=': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(63,18): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(64,18): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(65,18): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(80,13): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(81,13): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(82,13): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(83,13): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(84,13): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(85,13): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(32,6): warning C4101: 'xmin': unreferenced local variable
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(33,12): warning C4101: 'ymax': unreferenced local variable
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(34,12): warning C4101: 'zmax': unreferenced local variable
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(35,6): warning C4101: 'index': unreferenced local variable
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(33,6): warning C4101: 'ymin': unreferenced local variable
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(32,12): warning C4101: 'xmax': unreferenced local variable
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(34,6): warning C4101: 'zmin': unreferenced local variable
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(124,10): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(134,10): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(144,10): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(177,13): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(178,13): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(179,13): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(183,13): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(184,13): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\grid.cpp(185,13): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+  main.cpp
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\maths.h(81,8): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'main.cpp')
+  
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\color.h(42,14): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'main.cpp')
+  
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\color.h(41,14): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'main.cpp')
+  
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\color.h(40,28): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'main.cpp')
+  
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\main.cpp(356,27): warning C4244: 'argument': conversion from 'time_t' to 'const int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\main.cpp(366,13): warning C4849: OpenMP 'collapse' clause ignored in 'parallel for' directive
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\main.cpp(377,25): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\main.cpp(378,25): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\main.cpp(404,31): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\main.cpp(406,31): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\main.cpp(408,31): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\main.cpp(426,13): warning C4849: OpenMP 'collapse' clause ignored in 'parallel for' directive
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\main.cpp(439,24): warning C4018: '<': signed/unsigned mismatch
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\main.cpp(452,18): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  scene.cpp
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\maths.h(81,8): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'scene.cpp')
+  
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\color.h(42,14): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'scene.cpp')
+  
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\color.h(41,14): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'scene.cpp')
+  
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\color.h(40,28): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  (compiling source file 'scene.cpp')
+  
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(33,9): warning C4305: 'argument': truncation from 'double' to 'const float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(34,9): warning C4305: 'argument': truncation from 'double' to 'const float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(148,8): warning C4101: 't0': unreferenced local variable
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(148,12): warning C4101: 't1': unreferenced local variable
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(166,21): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(186,20): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(315,23): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(316,23): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(255,8): warning C4101: 't_intersec': unreferenced local variable
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(393,55): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(393,52): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(393,45): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(393,41): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(393,33): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(447,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(452,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(550,57): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(621,38): warning C4244: 'argument': conversion from 'time_t' to 'const int', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(625,38): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(629,112): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(629,50): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(629,40): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(629,29): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(648,59): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(648,52): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(648,29): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(650,30): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(652,77): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(652,62): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(652,47): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(653,34): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(658,116): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(658,95): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(658,74): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(659,34): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(665,127): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(665,89): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(665,68): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(665,47): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(666,34): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(675,75): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(680,48): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(680,42): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(680,37): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(680,32): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(685,64): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(685,59): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(685,42): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(685,37): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\scene.cpp(685,32): warning C4305: 'argument': truncation from 'double' to 'float'
+  vector.cpp
+C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\DistributionRayTracer\vector.cpp(66,15): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+  Generating code
+  654 of 667 functions (98.1%) were compiled, the rest were copied from previous compilation.
+    1 functions were new in current compilation
+    2 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  DistributionRayTracer.vcxproj -> C:\Users\jap\Dropbox\jap\IST\cadeiras\P3D\P3D_2425\LAB\DistributionRayTracer\x64\Release\DistributionRayTracer.exe
+  0 File(s) copied
