@@ -76,6 +76,13 @@ public:
 		Vector ray_dir;
 
 		//PUT YOUR CODE HERE
+		// Normalize pixel coordinates in the center of the square [-0.5, 0.5]
+		float px = (pixel_sample.x / res_x - 0.5f) * w;
+		float py = (pixel_sample.y / res_y - 0.5f) * h;
+
+		// Compute ray direction in the camera coordinate system
+		ray_dir = (u * px) + (v * py) - (n * plane_dist);
+		ray_dir.normalize();
 
 		return Ray(eye, ray_dir);  
 	}

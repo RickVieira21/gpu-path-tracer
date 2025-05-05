@@ -304,7 +304,15 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 
 		for (int i = 0; i < num_objects; i++)
 		{
-			//COMPLETE THE CODE
+			//COMPLETE THE CODE (?)
+			obj = scene->getObject(i);
+			auxRec = obj->hit(ray);	// Try intersecting the ray in an object
+
+			/* If the ray intersects the nearest object then store both the object and its hit record */
+			if (auxRec.isHit && auxRec.t < closestHit.t) {
+				closestHit = auxRec;
+				hitObj = obj;
+			}
 		}
 
 		if (hitObj == NULL) {  // No intersected object
@@ -343,7 +351,82 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 	hitPoint = ray.origin + ray.direction * closestHit.t;
 	N = closestHit.normal;
 
-	//CALCULATE THE COLOR OF THE PIXEL
+	//CALCULATE THE COLOR OF THE PIXEL (Blinn-Phong Reflection Model)
+	Material* mat = hitObj->GetMaterial();
+	// Vector V = (ray.origin - hitPoint).normalize();
+	Vector V = ray.direction*-1;
+
+	for (int j = 0; j < num_lights; j++) {
+		Light* light = scene->getLight(j);
+		Vector L = (light->position - hitPoint).normalize();
+		// Vector R = (N * 2.0f * (N * L) - L).normalize();
+		Vector H = (L + V).normalize(); // Half way vector (Blinn)
+
+		// Shadow ray
+		Ray shadowRay(hitPoint + N * 0.001f, L);
+		bool inShadow = false;
+
+		int num_objects = scene->getNumObjects();
+		for (int k = 0; k < num_objects; k++) {
+			Object* shadowObj = scene->getObject(k);
+			HitRecord shadowHit = shadowObj->hit(shadowRay);
+
+			if (shadowHit.isHit && shadowHit.t > 0.001f &&
+				shadowHit.t < (light->position - hitPoint).length()) {
+				inShadow = true;
+				break;
+			}
+		}
+
+		if (!inShadow) {
+			float NdotL = std::max(0.0f, N * L);
+			// float RdotV = std::max(0.0f, R * V);
+			float NdotH = std::max(0.0f, N * H);
+
+			Color diffuse = mat->GetDiffColor() * light->emission * NdotL;
+			// Color specular = mat->GetSpecColor() * light->emission * pow(RdotV, mat->GetShine());
+			Color specular = mat->GetSpecColor() * light->emission * pow(NdotH, mat->GetShine());
+
+			color_Acc += diffuse + specular;
+		}
+	}
+
+	/*
+	// Reflection
+	if (depth < MAX_DEPTH && mat->GetSpecular() > 0.0f) {
+		Vector reflectDir = ray.direction - N * 2.0f * (ray.direction * N);
+		reflectDir.normalize();
+		Ray reflectRay(hitPoint + N * 0.001f, reflectDir);
+		Color reflectColor = rayTracing(reflectRay, depth + 1, ior_1, lightSample);
+		color_Acc += reflectColor * mat->GetSpecular();
+	}
+
+	// Refraction
+	if (depth < MAX_DEPTH && mat->GetTransmittance() > 0.0f) {
+		float ior_2 = mat->GetRefrIndex();
+		Vector I = ray.direction.normalize();
+		float cosi = std::clamp(I * N, -1.0f, 1.0f);
+		float eta = ior_1 / ior_2;
+		Vector n = N;
+
+		if (cosi < 0) {
+			cosi = -cosi;
+		}
+		else {
+			std::swap(ior_1, ior_2);
+			n = N*-1;	// -N
+			eta = ior_1 / ior_2;
+		}
+
+		float k = 1.0f - eta * eta * (1.0f - cosi * cosi);
+		if (k >= 0) {
+			Vector refractDir = (I * eta + n * (eta * cosi - sqrtf(k))).normalize();
+			Ray refractRay(hitPoint - N * 0.001f, refractDir);
+			Color refractColor = rayTracing(refractRay, depth + 1, ior_2, lightSample);
+			color_Acc += refractColor * mat->GetTransmittance();
+		}
+	}
+	*/
 
 	return color_Acc.clamp();
 }
