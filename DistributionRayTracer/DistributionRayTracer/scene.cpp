@@ -114,10 +114,41 @@ HitRecord Sphere::hit(Ray& r)
 	rec.t = FLT_MAX;
 	rec.isHit = false;
 
-	//PUT HERE YOUR CODE
-	
-	return (rec);
+	// PUT YOUR CODE HERE - DONE
+
+	Vector oc = r.origin - center;
+
+	float a = r.direction * r.direction;
+	float b = 2.0f * (oc * r.direction);
+	float c = (oc * oc) - radius * radius;
+
+	float discriminant = b * b - 4.0f * a * c;
+
+	if (discriminant < 0.0f)
+		return rec;
+
+	float sqrtDisc = sqrt(discriminant);
+	float t1 = (-b - sqrtDisc) / (2.0f * a);
+	float t2 = (-b + sqrtDisc) / (2.0f * a);
+
+	float t;
+	if (t1 > EPSILON)
+		t = t1;
+	else if (t2 > EPSILON)
+		t = t2;
+	else
+		return rec;
+
+	rec.t = t;
+	rec.isHit = true;
+
+	// Calcula ponto de interseção temporário
+	Vector hitPoint = r.origin + r.direction * t;
+	rec.normal = (hitPoint - center).normalize();
+
+	return rec;
 }
+
 
 
 AABB Sphere::GetBoundingBox() {
@@ -393,7 +424,7 @@ bool Scene::load_p3f(const char *name)
 		  material = new Material(cd, Kd, cs, Ks, Shine, T, ior);
       }
 
-      else if (cmd == "s")    //Sphere
+      else if (cmd == "s")    //
       {
 	     Vector center;
     	 float radius;

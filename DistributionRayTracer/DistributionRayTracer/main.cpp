@@ -304,7 +304,7 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 
 		for (int i = 0; i < num_objects; i++)
 		{
-			//COMPLETE THE CODE (?)
+			//COMPLETE THE CODE - DONE
 			obj = scene->getObject(i);
 			auxRec = obj->hit(ray);	// Try intersecting the ray in an object
 
@@ -351,7 +351,8 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 	hitPoint = ray.origin + ray.direction * closestHit.t;
 	N = closestHit.normal;
 
-	//CALCULATE THE COLOR OF THE PIXEL (Blinn-Phong Reflection Model)
+	//CALCULATE THE COLOR OF THE PIXEL (Blinn-Phong Reflection Model) - DONE
+
 	Material* mat = hitObj->GetMaterial();
 	// Vector V = (ray.origin - hitPoint).normalize();
 	Vector V = ray.direction*-1;
