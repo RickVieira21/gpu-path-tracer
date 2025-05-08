@@ -44,19 +44,48 @@ AABB Triangle::GetBoundingBox() {
 //
 
 HitRecord Triangle::hit(Ray& r) {
-
 	HitRecord rec;
-	rec.t = FLT_MAX;  //not necessary
-	rec.isHit = false;  //not necessary
+	rec.t = FLT_MAX;
+	rec.isHit = false;
 
-	/* Calculate the normal */
-	Vector normal = (points[1] - points[0]) % (points[2] - points[1]);  //cross product
-	normal.normalize();
+	Vector v0 = points[0];
+	Vector v1 = points[1];
+	Vector v2 = points[2];
 
-	//PUT HERE YOUR CODE
-	
-	return (rec);
+	Vector edge1 = v1 - v0;
+	Vector edge2 = v2 - v0;
+
+	Vector h = r.direction % edge2;
+	float a = edge1 * h;
+
+	if (fabs(a) < EPSILON)
+		return rec;  // Ray is parallel to the triangle
+
+	float f = 1.0f / a;
+	Vector s = r.origin - v0;
+	float u = f * (s * h);
+
+	if (u < 0.0f || u > 1.0f)
+		return rec;
+
+	Vector q = s % edge1;
+	float v = f * (r.direction * q);
+
+	if (v < 0.0f || u + v > 1.0f)
+		return rec;
+
+	float t = f * (edge2 * q);
+
+	if (t > EPSILON) {
+		rec.t = t;
+		rec.isHit = true;
+		rec.normal = (edge1 % edge2).normalize();
+		rec.bary = Vector(1.0f - u - v, u, v);
+	}
+
+	return rec;
 }
+
 
 
 Plane::Plane(Vector& a_PN, float a_D)
@@ -152,13 +181,11 @@ HitRecord Sphere::hit(Ray& r)
 
 
 AABB Sphere::GetBoundingBox() {
-	Vector a_min;
-	Vector a_max;
-
-	//PUT HERE YOUR CODE
-	
-	return(AABB(a_min, a_max));
+	Vector a_min = center - Vector(radius, radius, radius);
+	Vector a_max = center + Vector(radius, radius, radius);
+	return AABB(a_min, a_max);
 }
+
 
 aaBox::aaBox(Vector& minPoint, Vector& maxPoint) //Axis aligned Box: another geometric object
 {
@@ -176,12 +203,43 @@ HitRecord aaBox::hit(Ray& ray)
 	rec.t = FLT_MAX;
 	rec.isHit = false;
 
-	float t0, t1; //entering and leaving points
+	float tmin = (min.x - ray.origin.x) / ray.direction.x;
+	float tmax = (max.x - ray.origin.x) / ray.direction.x;
+	if (tmin > tmax) std::swap(tmin, tmax);
 
-	//PUT HERE YOUR CODE
-		return (rec);
-	
+	float tymin = (min.y - ray.origin.y) / ray.direction.y;
+	float tymax = (max.y - ray.origin.y) / ray.direction.y;
+	if (tymin > tymax) std::swap(tymin, tymax);
+
+	if ((tmin > tymax) || (tymin > tmax))
+		return rec;
+
+	if (tymin > tmin)
+		tmin = tymin;
+	if (tymax < tmax)
+		tmax = tymax;
+
+	float tzmin = (min.z - ray.origin.z) / ray.direction.z;
+	float tzmax = (max.z - ray.origin.z) / ray.direction.z;
+	if (tzmin > tzmax) std::swap(tzmin, tzmax);
+
+	if ((tmin > tzmax) || (tzmin > tmax))
+		return rec;
+
+	if (tzmin > tmin)
+		tmin = tzmin;
+	if (tzmax < tmax)
+		tmax = tzmax;
+
+	if (tmax < 0)
+		return rec; // box is behind the ray
+
+	rec.t = (tmin < 0) ? tmax : tmin;
+	rec.isHit = true;
+
+	return rec;
 }
+
 
 
 Scene::Scene()

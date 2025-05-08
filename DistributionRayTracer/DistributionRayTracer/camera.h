@@ -75,7 +75,7 @@ public:
 	{
 		Vector ray_dir;
 
-		//PUT YOUR CODE HERE
+		//PUT YOUR CODE HERE - DONE
 		// Normalize pixel coordinates in the center of the square [-0.5, 0.5]
 		float px = (pixel_sample.x / res_x - 0.5f) * w;
 		float py = (pixel_sample.y / res_y - 0.5f) * h;

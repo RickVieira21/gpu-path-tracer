@@ -317,8 +317,8 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 
 		if (hitObj == NULL) {  // No intersected object
 			if (skybox_flg)  //skybox cubemap overrides background color 
-				//color_Acc = scene->GetSkyboxColor(ray);
-				color_Acc = (scene->GetBackgroundColor()); //just temporarily
+				color_Acc = scene->GetSkyboxColor(ray);
+				//color_Acc = (scene->GetBackgroundColor()); //just temporarily
 			else
 				color_Acc = (scene->GetBackgroundColor());
 
