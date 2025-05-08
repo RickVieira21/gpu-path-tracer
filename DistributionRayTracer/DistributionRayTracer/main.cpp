@@ -384,15 +384,15 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 			// float RdotV = std::max(0.0f, R * V);
 			float NdotH = std::max(0.0f, N * H);
 
-			Color diffuse = mat->GetDiffColor() * light->emission * NdotL;
+			Color diffuse = mat->GetDiffColor() * light->emission * NdotL * mat->GetDiffuse();
 			// Color specular = mat->GetSpecColor() * light->emission * pow(RdotV, mat->GetShine());
-			Color specular = mat->GetSpecColor() * light->emission * pow(NdotH, mat->GetShine());
+			Color specular = mat->GetSpecColor() * light->emission * pow(NdotH, mat->GetShine()) * mat->GetSpecular();
 
 			color_Acc += diffuse + specular;
 		}
 	}
 
-	/*
+	
 	// Reflection
 	if (depth < MAX_DEPTH && mat->GetSpecular() > 0.0f) {
 		Vector reflectDir = ray.direction - N * 2.0f * (ray.direction * N);
@@ -427,7 +427,7 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 			color_Acc += refractColor * mat->GetTransmittance();
 		}
 	}
-	*/
+	
 
 	return color_Acc.clamp();
 }
