@@ -391,7 +391,6 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 			color_Acc += diffuse + specular;
 		}
 	}
-
 	
 	// Reflection
 	if (depth < MAX_DEPTH && mat->GetSpecular() > 0.0f) {
@@ -402,32 +401,44 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 		color_Acc += reflectColor * mat->GetSpecular();
 	}
 
-	// Refraction
+	// Refraction with Fresnel using Schlick's Approximation
 	if (depth < MAX_DEPTH && mat->GetTransmittance() > 0.0f) {
 		float ior_2 = mat->GetRefrIndex();
 		Vector I = ray.direction.normalize();
 		float cosi = std::clamp(I * N, -1.0f, 1.0f);
-		float eta = ior_1 / ior_2;
+		float eta_i = ior_1;
+		float eta_t = ior_2;
 		Vector n = N;
 
-		if (cosi < 0) {
-			cosi = -cosi;
+		if (cosi > 0) {
+			std::swap(eta_i, eta_t);
+			n = N * -1.0f;
 		}
 		else {
-			std::swap(ior_1, ior_2);
-			n = N*-1;	// -N
-			eta = ior_1 / ior_2;
+			cosi = -cosi;
 		}
 
+		float eta = eta_i / eta_t;
 		float k = 1.0f - eta * eta * (1.0f - cosi * cosi);
-		if (k >= 0) {
+
+		// Schlick's Approximation
+		float R0 = pow((eta_i - eta_t) / (eta_i + eta_t), 2.0f);
+		float fresnel = R0 + (1.0f - R0) * pow(1.0f - cosi, 5.0f);
+
+		if (k >= 0.0f) {
 			Vector refractDir = (I * eta + n * (eta * cosi - sqrtf(k))).normalize();
-			Ray refractRay(hitPoint - N * 0.001f, refractDir);
-			Color refractColor = rayTracing(refractRay, depth + 1, ior_2, lightSample);
-			color_Acc += refractColor * mat->GetTransmittance();
+			Ray refractRay(hitPoint - N * EPSILON, refractDir);	// Fix acne spots
+			Color refractColor = rayTracing(refractRay, depth + 1, eta_t, lightSample);
+			color_Acc += refractColor * mat->GetTransmittance() * (1.0f - fresnel);
 		}
-	}
-	
+
+		// Reflection contribution using Fresnel factor
+		Vector reflectDir = I - N * 2.0f * (I * N);
+		reflectDir.normalize();
+		Ray reflectRay(hitPoint + N * EPSILON, reflectDir);	// Fix acne spots
+		Color reflectColor = rayTracing(reflectRay, depth + 1, eta_i, lightSample);
+		color_Acc += reflectColor * fresnel;
+	}	
 
 	return color_Acc.clamp();
 }
