@@ -304,9 +304,8 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 
 		for (int i = 0; i < num_objects; i++)
 		{
-			//COMPLETE THE CODE - DONE
 			obj = scene->getObject(i);
-			auxRec = obj->hit(ray);	// Try intersecting the ray in an object
+			auxRec = obj->hit(ray);    // Try intersecting the ray in an object
 
 			/* If the ray intersects the nearest object then store both the object and its hit record */
 			if (auxRec.isHit && auxRec.t < closestHit.t) {
@@ -318,9 +317,8 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 		if (hitObj == NULL) {  // No intersected object
 			if (skybox_flg)  //skybox cubemap overrides background color 
 				color_Acc = scene->GetSkyboxColor(ray);
-				//color_Acc = (scene->GetBackgroundColor()); //just temporarily
 			else
-				color_Acc = (scene->GetBackgroundColor());
+				color_Acc = scene->GetBackgroundColor();
 
 			return color_Acc.clamp();
 		}
@@ -329,10 +327,9 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 	else if (Accel_Struct == GRID_ACC) {  // regular Grid
 		if (!grid_ptr->Traverse(ray, &hitObj, closestHit)) {
 			if (skybox_flg)
-				//color_Acc = scene->GetSkyboxColor(ray);
-				color_Acc = (scene->GetBackgroundColor()); //just temporarily
+				color_Acc = scene->GetSkyboxColor(ray);
 			else
-				color_Acc = (scene->GetBackgroundColor());
+				color_Acc = scene->GetBackgroundColor();
 			return color_Acc.clamp();
 		}
 	}
@@ -340,10 +337,9 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 	else if (Accel_Struct == BVH_ACC) { //BVH
 		if (!bvh_ptr->Traverse(ray, &hitObj, closestHit)) {
 			if (skybox_flg)
-				//color_Acc = scene->GetSkyboxColor(ray);
-				color_Acc = (scene->GetBackgroundColor()); //just temporarily
+				color_Acc = scene->GetSkyboxColor(ray);
 			else
-				color_Acc = (scene->GetBackgroundColor());
+				color_Acc = scene->GetBackgroundColor();
 			return color_Acc.clamp();
 		}
 	}
@@ -351,17 +347,15 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 	hitPoint = ray.origin + ray.direction * closestHit.t;
 	N = closestHit.normal;
 
-	//CALCULATE THE COLOR OF THE PIXEL (Blinn-Phong Reflection Model) - DONE
+	// CALCULATE THE COLOR OF THE PIXEL (Blinn-Phong Reflection Model)
 
 	Material* mat = hitObj->GetMaterial();
-	// Vector V = (ray.origin - hitPoint).normalize();
-	Vector V = ray.direction*-1;
+	Vector V = ray.direction * -1.0f;
 
 	for (int j = 0; j < num_lights; j++) {
 		Light* light = scene->getLight(j);
 		Vector L = (light->position - hitPoint).normalize();
-		// Vector R = (N * 2.0f * (N * L) - L).normalize();
-		Vector H = (L + V).normalize(); // Half way vector (Blinn)
+		Vector H = (L + V).normalize(); // Halfway vector (Blinn)
 
 		// Shadow ray
 		Ray shadowRay(hitPoint + N * 0.001f, L);
@@ -381,24 +375,26 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 
 		if (!inShadow) {
 			float NdotL = std::max(0.0f, N * L);
-			// float RdotV = std::max(0.0f, R * V);
 			float NdotH = std::max(0.0f, N * H);
 
 			Color diffuse = mat->GetDiffColor() * light->emission * NdotL * mat->GetDiffuse();
-			// Color specular = mat->GetSpecColor() * light->emission * pow(RdotV, mat->GetShine());
 			Color specular = mat->GetSpecColor() * light->emission * pow(NdotH, mat->GetShine()) * mat->GetSpecular();
 
 			color_Acc += diffuse + specular;
 		}
 	}
-	
+
 	// Reflection
 	if (depth < MAX_DEPTH && mat->GetSpecular() > 0.0f) {
 		Vector reflectDir = ray.direction - N * 2.0f * (ray.direction * N);
 		reflectDir.normalize();
 		Ray reflectRay(hitPoint + N * 0.001f, reflectDir);
 		Color reflectColor = rayTracing(reflectRay, depth + 1, ior_1, lightSample);
-		color_Acc += reflectColor * mat->GetSpecular();
+
+		// Multiply by the specular color and specular coefficient
+		reflectColor *= mat->GetSpecColor() * mat->GetSpecular();
+
+		color_Acc += reflectColor;
 	}
 
 	// Refraction with Fresnel using Schlick's Approximation
@@ -427,21 +423,30 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 
 		if (k >= 0.0f) {
 			Vector refractDir = (I * eta + n * (eta * cosi - sqrtf(k))).normalize();
-			Ray refractRay(hitPoint - N * EPSILON, refractDir);	// Fix acne spots
+			Ray refractRay(hitPoint - N * EPSILON, refractDir);    // Fix acne spots
 			Color refractColor = rayTracing(refractRay, depth + 1, eta_t, lightSample);
-			color_Acc += refractColor * mat->GetTransmittance() * (1.0f - fresnel);
+
+			// Multiply by transmittance and adjust for Fresnel factor
+			refractColor *= mat->GetTransmittance() * (1.0f - fresnel);
+
+			color_Acc += refractColor;
 		}
 
 		// Reflection contribution using Fresnel factor
 		Vector reflectDir = I - N * 2.0f * (I * N);
 		reflectDir.normalize();
-		Ray reflectRay(hitPoint + N * EPSILON, reflectDir);	// Fix acne spots
+		Ray reflectRay(hitPoint + N * EPSILON, reflectDir);    // Fix acne spots
 		Color reflectColor = rayTracing(reflectRay, depth + 1, eta_i, lightSample);
-		color_Acc += reflectColor * fresnel;
-	}	
+
+		// Multiply by the Fresnel factor to adjust reflection color
+		reflectColor *= fresnel;
+
+		color_Acc += reflectColor;
+	}
 
 	return color_Acc.clamp();
 }
+
 
 
 // Render function by primary ray casting from the eye towards the scene's objects
