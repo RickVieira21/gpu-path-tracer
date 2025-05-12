@@ -1,4 +1,4 @@
-accel bvh
+accel none
 spp 0
 bclr 0.678 0.761 0.953
 camera
