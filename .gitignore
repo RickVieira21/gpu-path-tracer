@@ -1,0 +1,41 @@
+# Ignore everything
+*
+
+# But not these files:
+!*.c
+!*.cpp
+!*.h
+!*.hpp
+
+# Also allow folders (so that the included files are reachable)
+!*/
+
+# Optional: Exclude build files and Visual Studio-specific files
+# If you still want to avoid typical VS clutter (like .vs/, .obj/, .exe, etc.)
+
+# Ignore Visual Studio files and folders
+.vs/
+*.vcxproj*
+*.sln
+*.user
+*.filters
+*.obj
+*.exe
+*.log
+*.ipch
+*.pdb
+*.ilk
+*.tlog
+*.cache
+*.db
+*.opensdf
+*.sdf
+*.ncb
+*.suo
+
+# Ignore build and debug folders
+Debug/
+Release/
+build/
+x64/
+x86/
