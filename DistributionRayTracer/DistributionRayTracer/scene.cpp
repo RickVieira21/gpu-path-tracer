@@ -203,43 +203,71 @@ HitRecord aaBox::hit(Ray& ray)
 	rec.t = FLT_MAX;
 	rec.isHit = false;
 
-	float tmin = (min.x - ray.origin.x) / ray.direction.x;
-	float tmax = (max.x - ray.origin.x) / ray.direction.x;
-	if (tmin > tmax) std::swap(tmin, tmax);
+	float a = ray.direction.x;
+	float b = ray.direction.y;
+	float c = ray.direction.z;
 
-	float tymin = (min.y - ray.origin.y) / ray.direction.y;
-	float tymax = (max.y - ray.origin.y) / ray.direction.y;
-	if (tymin > tymax) std::swap(tymin, tymax);
+	// Compute slab intersection distances for each axis
+	float tx_min = (min.x - ray.origin.x) / a;
+	float tx_max = (max.x - ray.origin.x) / a;
+	if (tx_min > tx_max) std::swap(tx_min, tx_max);
 
-	if ((tmin > tymax) || (tymin > tmax))
+	float ty_min = (min.y - ray.origin.y) / b;
+	float ty_max = (max.y - ray.origin.y) / b;
+	if (ty_min > ty_max) std::swap(ty_min, ty_max);
+
+	float tz_min = (min.z - ray.origin.z) / c;
+	float tz_max = (max.z - ray.origin.z) / c;
+	if (tz_min > tz_max) std::swap(tz_min, tz_max);
+
+	float tE, tL;
+	Vector face_in, face_out;
+
+	// Find largest tE (entering point)
+	if (tx_min > ty_min) {
+		tE = tx_min;
+		face_in = (a >= 0.0f) ? Vector(-1, 0, 0) : Vector(1, 0, 0);
+	}
+	else {
+		tE = ty_min;
+		face_in = (b >= 0.0f) ? Vector(0, -1, 0) : Vector(0, 1, 0);
+	}
+	if (tz_min > tE) {
+		tE = tz_min;
+		face_in = (c >= 0.0f) ? Vector(0, 0, -1) : Vector(0, 0, 1);
+	}
+
+	// Find smallest tL (leaving point)
+	if (tx_max < ty_max) {
+		tL = tx_max;
+		face_out = (a >= 0.0f) ? Vector(1, 0, 0) : Vector(-1, 0, 0);
+	}
+	else {
+		tL = ty_max;
+		face_out = (b >= 0.0f) ? Vector(0, 1, 0) : Vector(0, -1, 0);
+	}
+	if (tz_max < tL) {
+		tL = tz_max;
+		face_out = (c >= 0.0f) ? Vector(0, 0, 1) : Vector(0, 0, -1);
+	}
+
+	// Check for a valid hit
+	if (tE < tL && tL > 0.0f) {
+		rec.isHit = true;
+		if (tE > 0.0f) {
+			rec.t = tE;
+			rec.normal = face_in;
+		}
+		else {
+			rec.t = tL;
+			rec.normal = face_out;
+		}
+
 		return rec;
+	}
 
-	if (tymin > tmin)
-		tmin = tymin;
-	if (tymax < tmax)
-		tmax = tymax;
-
-	float tzmin = (min.z - ray.origin.z) / ray.direction.z;
-	float tzmax = (max.z - ray.origin.z) / ray.direction.z;
-	if (tzmin > tzmax) std::swap(tzmin, tzmax);
-
-	if ((tmin > tzmax) || (tzmin > tmax))
-		return rec;
-
-	if (tzmin > tmin)
-		tmin = tzmin;
-	if (tzmax < tmax)
-		tmax = tzmax;
-
-	if (tmax < 0)
-		return rec; // box is behind the ray
-
-	rec.t = (tmin < 0) ? tmax : tmin;
-	rec.isHit = true;
-
-	return rec;
+	return rec; // no hit
 }
-
 
 
 Scene::Scene()
