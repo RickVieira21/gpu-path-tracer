@@ -426,8 +426,13 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 			Ray refractRay(hitPoint - N * EPSILON, refractDir);    // Fix acne spots
 			Color refractColor = rayTracing(refractRay, depth + 1, eta_t, lightSample);
 
-			// Multiply by transmittance and adjust for Fresnel factor
-			refractColor *= mat->GetTransmittance() * (1.0f - fresnel);
+			// Apply Beer’s Law for colored attenuation
+			Color absorption = mat->GetDiffColor(); // Use diffuse color as absorption coefficient
+			Color absorptionDistance = absorption * (-closestHit.t);
+			Color attenuation = absorptionDistance.exp_(); // Exponential attenuation
+
+			// Multiply refracted color by attenuation and transmittance
+			refractColor *= attenuation * mat->GetTransmittance() * (1.0f - fresnel);
 
 			color_Acc += refractColor;
 		}
