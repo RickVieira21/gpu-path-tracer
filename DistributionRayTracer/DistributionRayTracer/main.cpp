@@ -348,7 +348,6 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 	N = closestHit.normal;
 
 	// CALCULATE THE COLOR OF THE PIXEL (Blinn-Phong Reflection Model)
-
 	Material* mat = hitObj->GetMaterial();
 	Vector V = ray.direction * -1.0f;
 
@@ -358,15 +357,15 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 		Vector H = (L + V).normalize(); // Halfway vector (Blinn)
 
 		// Shadow ray
-		Ray shadowRay(hitPoint + N * 0.001f, L);
+		Ray shadowRay(hitPoint + N * EPSILON, L);
 		bool inShadow = false;
 
 		int num_objects = scene->getNumObjects();
-		for (int k = 0; k < num_objects; k++) {
-			Object* shadowObj = scene->getObject(k);
+		for (int c = 0; c < num_objects; c++) {
+			Object* shadowObj = scene->getObject(c);
 			HitRecord shadowHit = shadowObj->hit(shadowRay);
 
-			if (shadowHit.isHit && shadowHit.t > 0.001f &&
+			if (shadowHit.isHit && shadowHit.t > EPSILON &&
 				shadowHit.t < (light->position - hitPoint).length()) {
 				inShadow = true;
 				break;
@@ -388,7 +387,7 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 	if (depth < MAX_DEPTH && mat->GetSpecular() > 0.0f) {
 		Vector reflectDir = ray.direction - N * 2.0f * (ray.direction * N);
 		reflectDir.normalize();
-		Ray reflectRay(hitPoint + N * 0.001f, reflectDir);
+		Ray reflectRay(hitPoint + N * EPSILON, reflectDir);
 		Color reflectColor = rayTracing(reflectRay, depth + 1, ior_1, lightSample);
 
 		// Multiply by the specular color and specular coefficient
@@ -399,59 +398,66 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 
 	// Refraction with Fresnel using Schlick's Approximation
 	if (depth < MAX_DEPTH && mat->GetTransmittance() > 0.0f) {
-		float ior_2 = mat->GetRefrIndex();
-		Vector I = ray.direction.normalize();
-		float cosi = std::clamp(I * N, -1.0f, 1.0f);
-		float eta_i = ior_1;
-		float eta_t = ior_2;
+		Vector I = ray.direction;
 		Vector n = N;
 
-		if (cosi > 0) {
-			std::swap(eta_i, eta_t);
+		float eta_i = ior_1;
+		float eta_t = mat->GetRefrIndex();
+
+		float cos_i = std::clamp(I * N, -1.0f, 1.0f);
+		bool insideObject = cos_i < 0.0f;
+
+		if (insideObject) {
+			eta_i = ior_1;
+			eta_t = mat->GetRefrIndex();
+			n = N;
+			cos_i = -cos_i;
+		} else {
+			eta_i = ior_1;
+			eta_t = 1.0f;
 			n = N * -1.0f;
-		}
-		else {
-			cosi = -cosi;
 		}
 
 		float eta = eta_i / eta_t;
-		float k = 1.0f - eta * eta * (1.0f - cosi * cosi);
+		float k = 1.0f - eta * eta * (1.0f - cos_i * cos_i);
 
-		// Schlick's Approximation
+		// Fresnel with Schlick's Approximation
 		float R0 = pow((eta_i - eta_t) / (eta_i + eta_t), 2.0f);
-		float fresnel = R0 + (1.0f - R0) * pow(1.0f - cosi, 5.0f);
+		float k_r = R0 + (1.0f - R0) * pow(1.0f - cos_i, 5.0f);
+
+		Color attenuation(1.0f, 1.0f, 1.0f);
+		if (!insideObject) {
+			// Apply Beer's Law
+			Color absorption = Color(1.0f, 1.0f, 1.0f) - mat->GetDiffColor();
+			attenuation = (absorption * (-closestHit.t)).exp_();
+		}
+		else {
+			// Use diffuse color with no attenuation
+			attenuation = mat->GetDiffColor();
+		}
 
 		if (k >= 0.0f) {
-			Vector refractDir = (I * eta + n * (eta * cosi - sqrtf(k))).normalize();
-			Ray refractRay(hitPoint - N * EPSILON, refractDir);    // Fix acne spots
-			Color refractColor = rayTracing(refractRay, depth + 1, eta_t, lightSample);
-
-			// Apply Beer’s Law for colored attenuation
-			Color absorption = mat->GetDiffColor(); // Use diffuse color as absorption coefficient
-			Color absorptionDistance = absorption * (-closestHit.t);
-			Color attenuation = absorptionDistance.exp_(); // Exponential attenuation
-
-			// Multiply refracted color by attenuation and transmittance
-			refractColor *= attenuation * mat->GetTransmittance() * (1.0f - fresnel);
+			Vector refractDir = (I * eta + n * (eta * cos_i - sqrtf(k))).normalize();
+			Ray refractRay(hitPoint - n * EPSILON, refractDir);    // Fix acne spots
+			Color refractColor = rayTracing(refractRay, depth + 1, eta_t, lightSample) * attenuation * (1.0f - k_r);
 
 			color_Acc += refractColor;
+		
+		} else {	// Total reflection
+			k_r = 1.0f;
 		}
 
 		// Reflection contribution using Fresnel factor
-		Vector reflectDir = I - N * 2.0f * (I * N);
+		Vector reflectDir = I - n * 2.0f * (I * n);
 		reflectDir.normalize();
-		Ray reflectRay(hitPoint + N * EPSILON, reflectDir);    // Fix acne spots
-		Color reflectColor = rayTracing(reflectRay, depth + 1, eta_i, lightSample);
-
-		// Multiply by the Fresnel factor to adjust reflection color
-		reflectColor *= fresnel;
+		Ray reflectRay(hitPoint + n * EPSILON, reflectDir);    // Fix acne spots
+		Color reflectColor = rayTracing(reflectRay, depth + 1, eta_i, lightSample) * k_r * mat->GetSpecColor();
 
 		color_Acc += reflectColor;
 	}
 
 	return color_Acc.clamp();
 }
-
 
 
 // Render function by primary ray casting from the eye towards the scene's objects
