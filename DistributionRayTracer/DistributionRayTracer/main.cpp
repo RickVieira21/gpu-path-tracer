@@ -408,9 +408,12 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 		bool insideObject = cos_i < 0.0f;
 
 		if (insideObject) {
+			eta_i = ior_1;
 			eta_t = mat->GetRefrIndex();
+			n = N;
 			cos_i = -cos_i;
 		} else {
+			eta_i = ior_1;
 			eta_t = 1.0f;
 			n = N * -1.0f;
 		}
@@ -545,11 +548,16 @@ void renderScene()
 				if(AA) {  
 					#pragma omp parallel for
 					for (int p = 0; p < spp; p++) {
+
+						// Jittered pixel sample in pixel space
+						float jitter_x = rand_float();
+						float jitter_y = rand_float();
+						
 						if(!DOF) ray = scene->GetCamera()->PrimaryRay(pixel_sample);
 						else {        // sample_unit_disk() returns [-1 1] and aperture is the diameter of the lens
 
 							Vector lens_sample = rnd_unit_disk() * scene->GetCamera()->GetAperture() / 2.0f;  // lens sample in Camera coordinates
-
+							Vector pixel_sample(x + jitter_x, y + jitter_y, 0); // x, y are the integer pixel coordinates
 							/////////PROGRAM THE FOLLOWING FUNCTION//////////////////////
 							ray = scene->GetCamera()->PrimaryRay(lens_sample, pixel_sample);
 						}
