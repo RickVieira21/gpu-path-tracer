@@ -408,12 +408,9 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 		bool insideObject = cos_i < 0.0f;
 
 		if (insideObject) {
-			eta_i = ior_1;
 			eta_t = mat->GetRefrIndex();
-			n = N;
 			cos_i = -cos_i;
 		} else {
-			eta_i = ior_1;
 			eta_t = 1.0f;
 			n = N * -1.0f;
 		}
