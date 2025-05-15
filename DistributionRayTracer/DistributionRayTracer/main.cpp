@@ -356,31 +356,51 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 		Vector L = (light->position - hitPoint).normalize();
 		Vector H = (L + V).normalize(); // Halfway vector (Blinn)
 
-		// Shadow ray
-		Ray shadowRay(hitPoint + N * EPSILON, L);
-		bool inShadow = false;
+		// ---------- Soft Shadows Begin ----------
+		const int numShadowSamples = (AA) ? spp : 1; // spp já definido como número de amostras por pixel
 
-		int num_objects = scene->getNumObjects();
-		for (int c = 0; c < num_objects; c++) {
-			Object* shadowObj = scene->getObject(c);
-			HitRecord shadowHit = shadowObj->hit(shadowRay);
+		Color diffuseTotal(0.0f, 0.0f, 0.0f);
+		Color specularTotal(0.0f, 0.0f, 0.0f);
 
-			if (shadowHit.isHit && shadowHit.t > EPSILON &&
-				shadowHit.t < (light->position - hitPoint).length()) {
-				inShadow = true;
-				break;
+		for (int s = 0; s < numShadowSamples; s++) {
+			// Geração da amostra na área da luz
+			Vector jitter;
+			if (AA) {
+				jitter = Vector(rand_float(), rand_float(), 0.0f); // jittered sampling
+			}
+			else {
+				jitter = Vector(0.5f, 0.5f, 0.0f); // centro da luz (regular)
+			}
+
+			Vector lightPoint = light->getAreaLightPoint(jitter);
+			Vector L = (lightPoint - hitPoint).normalize();
+			Vector H = (L + V).normalize();
+
+			Ray shadowRay(hitPoint + N * EPSILON, L);
+			bool inShadow = false;
+
+			for (int c = 0; c < scene->getNumObjects(); c++) {
+				Object* shadowObj = scene->getObject(c);
+				HitRecord shadowHit = shadowObj->hit(shadowRay);
+
+				if (shadowHit.isHit && shadowHit.t > EPSILON &&
+					shadowHit.t < (lightPoint - hitPoint).length()) {
+					inShadow = true;
+					break;
+				}
+			}
+
+			if (!inShadow) {
+				float NdotL = std::max(0.0f, N * L);
+				float NdotH = std::max(0.0f, N * H);
+
+				diffuseTotal += mat->GetDiffColor() * light->emission * NdotL * mat->GetDiffuse();
+				specularTotal += mat->GetSpecColor() * light->emission * pow(NdotH, mat->GetShine()) * mat->GetSpecular();
 			}
 		}
 
-		if (!inShadow) {
-			float NdotL = std::max(0.0f, N * L);
-			float NdotH = std::max(0.0f, N * H);
-
-			Color diffuse = mat->GetDiffColor() * light->emission * NdotL * mat->GetDiffuse();
-			Color specular = mat->GetSpecColor() * light->emission * pow(NdotH, mat->GetShine()) * mat->GetSpecular();
-
-			color_Acc += diffuse + specular;
-		}
+		color_Acc += (diffuseTotal + specularTotal) * (1.0f / numShadowSamples);
+		// ---------- Soft Shadows End ----------
 	}
 
 	// Reflection
@@ -542,42 +562,66 @@ void renderScene()
 				int index_col = 0;
 				Ray ray;
 				Vector pixel_sample;  //viewport coordinates
-				Vector light_sample = Vector(0.0f, 0.0f, 0.0f); // sample in Light coordinates
+				Vector light_sample; // sample in Light coordinates
 
-				////// ZONE B.1  -  Distribution Ray Tracer: pixel, area light and lens supersampling with jittering (or stratified)
-				if(AA) {  
-					#pragma omp parallel for
+				// ZONE B.1 - Distribution Ray Tracer: pixel, area light and lens supersampling with jittering
+				if (AA) {
+					Color temp_color(0.0f, 0.0f, 0.0f);
+					float r_sum = 0.0f, g_sum = 0.0f, b_sum = 0.0f;
+
+					#pragma omp parallel for reduction(+:r_sum, g_sum, b_sum)
 					for (int p = 0; p < spp; p++) {
-
-						// Jittered pixel sample in pixel space
 						float jitter_x = rand_float();
 						float jitter_y = rand_float();
-						
-						if(!DOF) ray = scene->GetCamera()->PrimaryRay(pixel_sample);
-						else {        // sample_unit_disk() returns [-1 1] and aperture is the diameter of the lens
+						Vector pixel_sample(x + jitter_x, y + jitter_y, 0.0f);
 
-							Vector lens_sample = rnd_unit_disk() * scene->GetCamera()->GetAperture() / 2.0f;  // lens sample in Camera coordinates
-							Vector pixel_sample(x + jitter_x, y + jitter_y, 0); // x, y are the integer pixel coordinates
-							/////////PROGRAM THE FOLLOWING FUNCTION//////////////////////
-							ray = scene->GetCamera()->PrimaryRay(lens_sample, pixel_sample);
+						Vector lens_sample(0.0f);
+						if (DOF) {
+							lens_sample = rnd_unit_disk() * scene->GetCamera()->GetAperture() / 2.0f;
 						}
 
-						/////////PROGRAM THE FOLLOWING FUNCTION//////////////////////
-						color += rayTracing(ray, 1, 1.0, light_sample);
+						Ray ray = DOF ? scene->GetCamera()->PrimaryRay(lens_sample, pixel_sample)
+							: scene->GetCamera()->PrimaryRay(pixel_sample);
+
+						// Light jittering (soft shadow)
+						Vector light_sample = Vector(rand_float(), rand_float(), 0.0f);
+
+						Color sample = rayTracing(ray, 1, 1.0, light_sample);
+						r_sum += sample.r();
+						g_sum += sample.g();
+						b_sum += sample.b();
 					}
-					color *= 1.0/((float)spp);
+
+					temp_color = Color(r_sum, g_sum, b_sum);
+					color = temp_color * (1.0f / spp);
 				}
 
-				//ZONE B.2  - Whitted ray tracer  (without antialiasing)
+				//ZONE B.2 - Whitted ray tracer (without antialiasing)
 				else {	
-
 					pixel_sample.x = x + 0.5f;  
 					pixel_sample.y = y + 0.5f;
 
 					/////////PROGRAM THE FOLLOWING FUNCTION//////////////////////
 					Ray ray1 = scene->GetCamera()->PrimaryRay(pixel_sample);
-					/////////PROGRAM THE FOLLOWING FUNCTION//////////////////////
-					color = rayTracing(ray1, 1, 1.0, light_sample);  //light_sample is a dummy variable in this case, 
+
+					Color accumulated_color(0.0f, 0.0f, 0.0f);
+
+					// Número de amostras por dimensão da área da luz
+					const int n = 2; // total de n x n amostras
+
+					for (int i = 0; i < n; ++i) {
+						for (int j = 0; j < n; ++j) {
+							Vector light_sample(
+								(i + 0.5f) / n,  // amostragem regular com offset
+								(j + 0.5f) / n,
+								0.0f
+							);
+
+							accumulated_color += rayTracing(ray1, 1, 1.0, light_sample);
+						}
+					}
+
+					color = accumulated_color * (1.0f / (n * n));
 				}
 
 				if (drawModeEnabled) {
