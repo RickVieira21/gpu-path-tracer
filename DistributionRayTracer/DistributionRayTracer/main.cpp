@@ -357,19 +357,20 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 		Vector H = (L + V).normalize(); // Halfway vector (Blinn)
 
 		// ---------- Soft Shadows Begin ----------
-		const int numShadowSamples = (AA) ? spp : 1; // spp já definido como número de amostras por pixel
+		const int numShadowSamples = (AA) ? spp : 4; // if spp = 0 then use 2 x 2 grid for regular sampling (quad lights)
 
 		Color diffuseTotal(0.0f, 0.0f, 0.0f);
 		Color specularTotal(0.0f, 0.0f, 0.0f);
-
+		
+		// Sample generation in area light
 		for (int s = 0; s < numShadowSamples; s++) {
-			// Geração da amostra na área da luz
 			Vector jitter;
 			if (AA) {
 				jitter = Vector(rand_float(), rand_float(), 0.0f); // jittered sampling
-			}
-			else {
-				jitter = Vector(0.5f, 0.5f, 0.0f); // centro da luz (regular)
+			} else {
+				int i = s / numShadowSamples;
+				int j = s % numShadowSamples;
+				jitter = Vector((i + 0.5f) / numShadowSamples, (j + 0.5f) / numShadowSamples, 0.0f); // regular grid sampling
 			}
 
 			Vector lightPoint = light->getAreaLightPoint(jitter);
@@ -606,17 +607,12 @@ void renderScene()
 
 					Color accumulated_color(0.0f, 0.0f, 0.0f);
 
-					// Número de amostras por dimensão da área da luz
-					const int n = 2; // total de n x n amostras
+					// Number of samples per area light (n x n)
+					const int n = 2;
 
 					for (int i = 0; i < n; ++i) {
 						for (int j = 0; j < n; ++j) {
-							Vector light_sample(
-								(i + 0.5f) / n,  // amostragem regular com offset
-								(j + 0.5f) / n,
-								0.0f
-							);
-
+							Vector light_sample((i + 0.5f) / n, (j + 0.5f) / n, 0.0f);
 							accumulated_color += rayTracing(ray1, 1, 1.0, light_sample);
 						}
 					}
