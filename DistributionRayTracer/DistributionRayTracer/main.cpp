@@ -283,6 +283,17 @@ void timer(int value)
 
 ///////////////////////////////////////////////////YOUR CODE HERE////////////////////////////////////////////////////////////////////////
 
+Vector random_in_unit_sphere() {
+	Vector p;
+	do {
+		p = Vector(rand_float() * 2.0f - 1.0f,
+			rand_float() * 2.0f - 1.0f,
+			rand_float() * 2.0f - 1.0f);
+	} while (p.lengthSquared() >= 1.0f);
+	return p;
+}
+
+
 Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index of refraction of medium 1 where the ray is travelling
 {
 	Color color_Acc; //Class constructor init the color with zero
@@ -407,8 +418,10 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 	// Reflection
 	if (depth < MAX_DEPTH && mat->GetSpecular() > 0.0f) {
 		Vector reflectDir = ray.direction - N * 2.0f * (ray.direction * N);
-		reflectDir.normalize();
-		Ray reflectRay(hitPoint + N * EPSILON, reflectDir);
+		float roughness = 0.2f;
+		Vector randomVec = random_in_unit_sphere();
+		Vector fuzzyReflectDir = (reflectDir + randomVec * roughness).normalize();
+		Ray reflectRay(hitPoint + N * EPSILON, fuzzyReflectDir);
 		Color reflectColor = rayTracing(reflectRay, depth + 1, ior_1, lightSample);
 
 		// Multiply by the specular color and specular coefficient
@@ -416,6 +429,7 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 
 		color_Acc += reflectColor;
 	}
+
 
 	// Refraction with Fresnel using Schlick's Approximation
 	if (depth < MAX_DEPTH && mat->GetTransmittance() > 0.0f) {

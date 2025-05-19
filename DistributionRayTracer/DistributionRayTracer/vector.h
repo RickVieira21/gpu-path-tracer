@@ -17,6 +17,7 @@ public:
 	float length();
 
 	float getAxisValue(int axis);
+	float lengthSquared() const;
 
 	Vector&	normalize();
 	Vector operator=(const Vector& v);
