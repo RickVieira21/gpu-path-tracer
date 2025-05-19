@@ -283,6 +283,17 @@ void timer(int value)
 
 ///////////////////////////////////////////////////YOUR CODE HERE////////////////////////////////////////////////////////////////////////
 
+Vector random_in_unit_sphere() {
+	Vector p;
+	do {
+		p = Vector(rand_float() * 2.0f - 1.0f,
+			rand_float() * 2.0f - 1.0f,
+			rand_float() * 2.0f - 1.0f);
+	} while (p.lengthSquared() >= 1.0f);
+	return p;
+}
+
+
 Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index of refraction of medium 1 where the ray is travelling
 {
 	Color color_Acc; //Class constructor init the color with zero
@@ -357,19 +368,20 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 		Vector H = (L + V).normalize(); // Halfway vector (Blinn)
 
 		// ---------- Soft Shadows Begin ----------
-		const int numShadowSamples = (AA) ? spp : 1; // spp já definido como número de amostras por pixel
+		const int numShadowSamples = (AA) ? spp : 4; // if spp = 0 then use 2 x 2 grid for regular sampling (quad lights)
 
 		Color diffuseTotal(0.0f, 0.0f, 0.0f);
 		Color specularTotal(0.0f, 0.0f, 0.0f);
-
+		
+		// Sample generation in area light
 		for (int s = 0; s < numShadowSamples; s++) {
-			// Geração da amostra na área da luz
 			Vector jitter;
 			if (AA) {
 				jitter = Vector(rand_float(), rand_float(), 0.0f); // jittered sampling
-			}
-			else {
-				jitter = Vector(0.5f, 0.5f, 0.0f); // centro da luz (regular)
+			} else {
+				int i = s / numShadowSamples;
+				int j = s % numShadowSamples;
+				jitter = Vector((i + 0.5f) / numShadowSamples, (j + 0.5f) / numShadowSamples, 0.0f); // regular grid sampling
 			}
 
 			Vector lightPoint = light->getAreaLightPoint(jitter);
@@ -406,8 +418,10 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 	// Reflection
 	if (depth < MAX_DEPTH && mat->GetSpecular() > 0.0f) {
 		Vector reflectDir = ray.direction - N * 2.0f * (ray.direction * N);
-		reflectDir.normalize();
-		Ray reflectRay(hitPoint + N * EPSILON, reflectDir);
+		float roughness = 0.2f;
+		Vector randomVec = random_in_unit_sphere();
+		Vector fuzzyReflectDir = (reflectDir + randomVec * roughness).normalize();
+		Ray reflectRay(hitPoint + N * EPSILON, fuzzyReflectDir);
 		Color reflectColor = rayTracing(reflectRay, depth + 1, ior_1, lightSample);
 
 		// Multiply by the specular color and specular coefficient
@@ -415,6 +429,7 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 
 		color_Acc += reflectColor;
 	}
+
 
 	// Refraction with Fresnel using Schlick's Approximation
 	if (depth < MAX_DEPTH && mat->GetTransmittance() > 0.0f) {
@@ -606,17 +621,12 @@ void renderScene()
 
 					Color accumulated_color(0.0f, 0.0f, 0.0f);
 
-					// Número de amostras por dimensão da área da luz
-					const int n = 2; // total de n x n amostras
+					// Number of samples per area light (n x n)
+					const int n = 2;
 
 					for (int i = 0; i < n; ++i) {
 						for (int j = 0; j < n; ++j) {
-							Vector light_sample(
-								(i + 0.5f) / n,  // amostragem regular com offset
-								(j + 0.5f) / n,
-								0.0f
-							);
-
+							Vector light_sample((i + 0.5f) / n, (j + 0.5f) / n, 0.0f);
 							accumulated_color += rayTracing(ray1, 1, 1.0, light_sample);
 						}
 					}

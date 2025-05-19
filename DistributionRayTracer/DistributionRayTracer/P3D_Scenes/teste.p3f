@@ -1,5 +1,5 @@
 accel none
-spp 0
+spp 6
 bclr 0.678 0.761 0.953
 camera
 eye -1.980269 0.934598 4.479839 
@@ -8,12 +8,12 @@ up 0 1 0
 angle 45
 hither 1.0
 resolution 800 600
-aperture 0
+aperture 1
 focal 1.5
 #area lights with regular grid - only when spp=0
-#light quad -1 4 -1 1 1 1 0.5 4 -1 -1 4 0.75 16
-light punctual -1 4 -1 1 1 1
-light punctual -3 1 5 1 1 1 
+light quad -1 4 -1 1 1 1 0.5 4 -1 -1 4 0.75 16
+#light punctual -1 4 -1 1 1 1
+#light punctual -3 1 5 1 1 1 
 mat 0.894 0.850 0.66 0.8 1 1 1 0 100 0 1
 p 3
 5.0 -0.5 -5.0
