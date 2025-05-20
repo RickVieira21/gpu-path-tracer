@@ -391,6 +391,7 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 			Ray shadowRay(hitPoint + N * EPSILON, L);
 			bool inShadow = false;
 
+			/*
 			for (int c = 0; c < scene->getNumObjects(); c++) {
 				Object* shadowObj = scene->getObject(c);
 				HitRecord shadowHit = shadowObj->hit(shadowRay);
@@ -400,7 +401,7 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 					inShadow = true;
 					break;
 				}
-			}
+			}*/
 
 			if (!inShadow) {
 				float NdotL = std::max(0.0f, N * L);

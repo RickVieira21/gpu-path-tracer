@@ -1,4 +1,4 @@
-accel none
+accel grid
 spp 6
 bclr 0.678 0.761 0.953
 camera

@@ -58,9 +58,6 @@ HitRecord Triangle::hit(Ray& r) {
 	Vector h = r.direction % edge2;
 	float a = edge1 * h;
 
-	if (fabs(a) < EPSILON)
-		return rec;  // Ray is parallel to the triangle
-
 	float f = 1.0f / a;
 	Vector s = r.origin - v0;
 	float u = f * (s * h);
@@ -68,15 +65,14 @@ HitRecord Triangle::hit(Ray& r) {
 	if (u < 0.0f || u > 1.0f)
 		return rec;
 
-	Vector q = s % edge1;
-	float v = f * (r.direction * q);
+	float v = (edge1 * (r.direction % s)) * f;
 
 	if (v < 0.0f || u + v > 1.0f)
 		return rec;
 
-	float t = f * (edge2 * q);
+	float t = (edge1 * (edge2 % s)) * f;
 
-	if (t > EPSILON) {
+	if (t > 0.0) {
 		rec.t = t;
 		rec.isHit = true;
 		rec.normal = (edge1 % edge2).normalize();
