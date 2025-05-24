@@ -89,7 +89,7 @@ void BVH::build_recursive(int left_index, int right_index, BVHNode *node) {
 			valA = centroidA.y;
 			valB = centroidB.y;
 			break;
-		case 2:
+		// case 2:
 		default:
 			valA = centroidA.z;
 			valB = centroidB.z;
@@ -157,7 +157,7 @@ bool BVH::Traverse(Ray& ray, Object** hit_obj, HitRecord& hitRec) {
 			float tmp;
 			bool hit = false;
 			stack<StackItem> hit_stack;
-			HitRecord rec;   //rec.isHit initialized to false and rec.t initialized with FLT_MAX
+			HitRecord rec;   // rec.isHit initialized to false and rec.t initialized with FLT_MAX
 
 			BVHNode* currentNode = nodes[0];
 
@@ -241,8 +241,77 @@ bool BVH::Traverse(Ray& ray) {  //shadow ray with length
 			HitRecord rec;
 
 			double length = ray.direction.length(); //distance between light and intersection point
-			ray.direction.normalize();
+			// cout << "Shadow ray length: " << length << '\n';
 
+			Vector dir = ray.direction.normalize();
+			Ray shadowRay(ray.origin, dir);			// Local ray
+
+			BVHNode* currentNode = nodes[0];  // Root
+			float root_t = FLT_MAX;
+
+			if (!currentNode->getAABB().hit(shadowRay, root_t)) {
+				return false; // No intersection with the root
+			}
+
+			while (true) {
+				if (!currentNode->isLeaf()) {
+					BVHNode* left = nodes[currentNode->getIndex()];
+					BVHNode* right = nodes[currentNode->getIndex() + 1];
+
+					float t_left = FLT_MAX, t_right = FLT_MAX;
+					bool hit_left = left->getAABB().hit(shadowRay, t_left);
+					bool hit_right = right->getAABB().hit(shadowRay, t_right);
+
+					if (hit_left && hit_right) {
+						// Stack the node that is furthest away, along with its hit parameter t
+						if (t_left < t_right) {
+							hit_stack.push(StackItem(right, t_right));
+							currentNode = left;
+						}
+						else {
+							hit_stack.push(StackItem(left, t_left));
+							currentNode = right;
+						}
+					}
+					else if (hit_left) {
+						currentNode = left;
+					}
+					else if (hit_right) {
+						currentNode = right;
+					}
+					else {
+						goto pop_stack;
+					}
+				}
+				else {
+					// Leaf node: Intersection test with each primitive in the leaf
+					unsigned int start = currentNode->getIndex();
+					unsigned int count = currentNode->getNObjs();
+
+					for (unsigned int i = 0; i < count; ++i) {
+						HitRecord tempRec = objects[start + i]->hit(shadowRay);
+
+						// Shadow detected
+						if (tempRec.isHit && tempRec.t > EPSILON  && tempRec.t < length) {
+							return true;
+						}
+					}
+
+				pop_stack:
+					while (!hit_stack.empty()) {
+						StackItem item = hit_stack.top();
+						hit_stack.pop();
+						if (item.t < length) {
+							currentNode = item.ptr;
+							goto continue_loop;
+						}
+					}
+
+					break;  // Empty stack (no intersections left)
+				}
+
+			continue_loop:;
+			}
 		
 			return false;  //no primitive intersection
 			

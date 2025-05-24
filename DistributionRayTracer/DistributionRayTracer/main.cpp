@@ -385,7 +385,7 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 			}
 
 			Vector lightPoint = light->getAreaLightPoint(jitter);
-			Vector L = (lightPoint - hitPoint).normalize();
+			Vector L = lightPoint - hitPoint;	// only normalized when not in shadow
 			Vector H = (L + V).normalize();
 
 			Ray shadowRay(hitPoint + N * EPSILON, L);
@@ -415,6 +415,7 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 
 
 			if (!inShadow) {
+				L = (lightPoint - hitPoint).normalize();
 				float NdotL = std::max(0.0f, N * L);
 				float NdotH = std::max(0.0f, N * H);
 
