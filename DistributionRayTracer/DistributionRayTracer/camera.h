@@ -71,34 +71,51 @@ public:
 		v = n % u;
 	}
 
-	Ray PrimaryRay(const Vector& pixel_sample) //  Rays cast from the Eye to a pixel sample which is in Viewport coordinates
+	// Gera um raio primário que vai do olho (câmera) até um ponto de amostra no pixel na viewport
+	Ray PrimaryRay(const Vector& pixel_sample) 
 	{
-		Vector ray_dir;
+		Vector ray_dir;  
 
-		//PUT YOUR CODE HERE - DONE
-		// Normalize pixel coordinates in the center of the square [-0.5, 0.5]
-		float px = (pixel_sample.x / res_x - 0.5f) * w;
-		float py = (pixel_sample.y / res_y - 0.5f) * h;
+		// Normalizar para colocar o pixel no sistema de coordenadas da câmera, no plano da imagem
+		float px = (pixel_sample.x / res_x - 0.5f) * w; 
+		float py = (pixel_sample.y / res_y - 0.5f) * h; 
 
-		// Compute ray direction in the camera coordinate system
+		// Calcula a direção do raio no sistema de coordenadas da câmera:
+		// 'u' e 'v' são os vetores base do plano da imagem (horizontal e vertical),
+		// 'n' é o vetor normal para o plano da imagem (direção da câmera),
+		// 'plane_dist' é a distância do plano da imagem ao olho
 		ray_dir = (u * px) + (v * py) - (n * plane_dist);
+
 		ray_dir.normalize();
 
-		return Ray(eye, ray_dir);  
+		// Retorna o raio com origem no olho (posição da câmera) e direção calculada
+		return Ray(eye, ray_dir);
 	}
 
+	// Gera um raio primário para câmeras do tipo "depth of field" 
+	// O raio começa numa amostra na lente e vai até uma amostra no pixel na viewport
 	Ray PrimaryRay(const Vector& lens_sample, const Vector& pixel_sample)
 	{
+		// Normaliza as coordenadas do pixel para o intervalo [-0.5, 0.5]
 		float px = (pixel_sample.x / res_x - 0.5f) * w;
 		float py = (pixel_sample.y / res_y - 0.5f) * h;
+
+		// Calcula a posição do pixel no mundo, no plano da imagem, relativo à posição do olho
 		Vector pixel_world = eye + (u * px) + (v * py) - (n * plane_dist);
 
+		// Origem do raio é um ponto amostrado na lente da câmera (simulando abertura)
+		// 'lens_sample' representa uma amostra aleatória dentro do disco da lente em coordenadas u e v
 		Vector origin = eye + (u * lens_sample.x) + (v * lens_sample.y);
+
+		// Direção do raio é do ponto da lente até o ponto do pixel no plano da imagem
 		Vector dir = pixel_world - origin;
+
 		dir.normalize();
 
+		// Retorna o raio com origem no ponto amostrado na lente e direção calculada
 		return Ray(origin, dir);
 	}
+
 };
 
 #endif

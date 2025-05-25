@@ -407,7 +407,7 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 			// Cria um raio sombra saindo do ponto de interseção na direção da luz
 			Ray shadowRay(hitPoint + N * EPSILON, L);
 
-			bool inShadow = false; // Variável para indicar se este ponto está em sombra
+			bool inShadow = false; 
 
 			if (Accel_Struct == NONE) {
 				// Se não tem estrutura de aceleração, faz teste de interseção com todos os objetos da cena
@@ -603,10 +603,8 @@ void renderScene()
 
 						Vector lens_sample = rnd_unit_disk() * scene->GetCamera()->GetAperture() / 2.0f;  // lens sample in Camera coordinates
 
-						/////////PROGRAM THE FOLLOWING FUNCTION//////////////////////
 						ray = scene->GetCamera()->PrimaryRay(lens_sample, pixel_sample);
 					}
-					/////////PROGRAM THE FOLLOWING FUNCTION//////////////////////
 					color = rayTracing(ray, 1, 1.0, Vector(rand_float(), rand_float(), 0.0f));
 
 					index_pos = 2 * (x + RES_X * y);
