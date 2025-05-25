@@ -358,44 +358,64 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 	hitPoint = ray.origin + ray.direction * closestHit.t;
 	N = closestHit.normal;
 
-	// CALCULATE THE COLOR OF THE PIXEL (Blinn-Phong Reflection Model)
-	Material* mat = hitObj->GetMaterial();
-	Vector V = ray.direction * -1.0f;
+	// CALCULAR A COR DO PIXEL (Modelo de Reflexão Blinn-Phong)
+	Material* mat = hitObj->GetMaterial(); // Obtém o material do objeto que foi atingido pelo raio
+	Vector V = ray.direction * -1.0f;      // Vetor que aponta do ponto de interseção para a origem da câmera (visualização)
 
+	// Percorre todas as luzes da cena para calcular a contribuição de cada uma
 	for (int j = 0; j < num_lights; j++) {
-		Light* light = scene->getLight(j);
-		Vector L = (light->position - hitPoint).normalize();
-		Vector H = (L + V).normalize(); // Halfway vector (Blinn)
+		Light* light = scene->getLight(j); // Obtém a luz j da cena
 
-		// ---------- Soft Shadows Begin ----------
-		const int numShadowSamples = (AA) ? spp : 4; // if spp = 0 then use 2 x 2 grid for regular sampling (quad lights)
+		// Vetor do ponto atingido para a posição da luz (direção da luz)
+		Vector L = (light->position - hitPoint).normalize();
+
+		// Vetor "meio-termo" para o modelo Blinn-Phong: direção média entre a luz e a visão
+		Vector H = (L + V).normalize();
+
+		// ---------- Início Soft Shadows ----------
+		 
+		// Se AA ativado, usa spp, senão usa 4 amostras padrão
+		const int numShadowSamples = (AA) ? spp : 4;
 
 		Color diffuseTotal(0.0f, 0.0f, 0.0f);
 		Color specularTotal(0.0f, 0.0f, 0.0f);
-		
-		// Sample generation in area light
+
+		// Loop para amostrar diferentes pontos na área da luz (para simular luzes com área e sombras suaves)
 		for (int s = 0; s < numShadowSamples; s++) {
-			Vector jitter;
+			Vector jitter; 
+
 			if (AA) {
-				jitter = Vector(rand_float(), rand_float(), 0.0f); // jittered sampling
-			} else {
+				// Se anti-aliasing está ativo, amostragem aleatória para suavizar bordas
+				jitter = Vector(rand_float(), rand_float(), 0.0f);
+			}
+			else {
+				// Se não, usa amostragem regular em grade (grid) 2x2 ou conforme numShadowSamples
 				int i = s / numShadowSamples;
 				int j = s % numShadowSamples;
-				jitter = Vector((i + 0.5f) / numShadowSamples, (j + 0.5f) / numShadowSamples, 0.0f); // regular grid sampling
+				jitter = Vector((i + 0.5f) / numShadowSamples, (j + 0.5f) / numShadowSamples, 0.0f);
 			}
 
+			// Obtém um ponto amostrado na área da luz com base no jitter
 			Vector lightPoint = light->getAreaLightPoint(jitter);
-			Vector L = lightPoint - hitPoint;	// only normalized when not in shadow
+
+			// Vetor do ponto atingido para o ponto na área da luz (não normalizado ainda)
+			Vector L = lightPoint - hitPoint;
+
+			// Recalcula vetor "meio-termo" para este ponto específico da luz
 			Vector H = (L + V).normalize();
 
+			// Cria um raio sombra saindo do ponto de interseção na direção da luz
 			Ray shadowRay(hitPoint + N * EPSILON, L);
-			bool inShadow = false;
+
+			bool inShadow = false; // Variável para indicar se este ponto está em sombra
 
 			if (Accel_Struct == NONE) {
+				// Se não tem estrutura de aceleração, faz teste de interseção com todos os objetos da cena
 				for (int c = 0; c < scene->getNumObjects(); c++) {
 					Object* shadowObj = scene->getObject(c);
 					HitRecord shadowHit = shadowObj->hit(shadowRay);
 
+					// Se houver interseção com objeto entre o ponto e a luz, ponto está em sombra
 					if (shadowHit.isHit && shadowHit.t > EPSILON &&
 						shadowHit.t < (lightPoint - hitPoint).length()) {
 						inShadow = true;
@@ -403,107 +423,149 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 					}
 				}
 			}
-
 			else {
-
 				if (Accel_Struct == GRID_ACC)
-					inShadow = grid_ptr->Traverse(shadowRay);  // método rápido
-
+					inShadow = grid_ptr->Traverse(shadowRay);  
 				else if (Accel_Struct == BVH_ACC)
-					inShadow = bvh_ptr->Traverse(shadowRay);  // método rápido
+					inShadow = bvh_ptr->Traverse(shadowRay);   
 			}
 
-
+			// Se ponto NÃO está em sombra, calcula contribuição difusa e especular para esta amostra
 			if (!inShadow) {
+
 				L = (lightPoint - hitPoint).normalize();
+
+				// Produto escalar entre normal da superfície e direção da luz
 				float NdotL = std::max(0.0f, N * L);
+
+				// Produto escalar entre normal da superfície e vetor meio-termo para reflexão especular
 				float NdotH = std::max(0.0f, N * H);
 
+				// Contribuição difusa: cor difusa do material * luz * NdotL * coeficiente difuso do material
 				diffuseTotal += mat->GetDiffColor() * light->emission * NdotL * mat->GetDiffuse();
+
+				// Contribuição especular: cor especular do material * luz * (NdotH^brilho) * coeficiente especular
 				specularTotal += mat->GetSpecColor() * light->emission * pow(NdotH, mat->GetShine()) * mat->GetSpecular();
 			}
 		}
 
+		// Após somar todas as amostras, adiciona média das contribuições ao acumulador final de cor
 		color_Acc += (diffuseTotal + specularTotal) * (1.0f / numShadowSamples);
-		// ---------- Soft Shadows End ----------
 	}
 
-	// Reflection
+	// ------------------------------ Reflexão ------------------------------
+
+	// Verifica se tem componente especular
 	if (depth < MAX_DEPTH && mat->GetSpecular() > 0.0f) {
+		// Calcula o vetor refletido da direção do raio em relação à normal N
 		Vector reflectDir = ray.direction - N * 2.0f * (ray.direction * N);
+
 		float roughness = 0.2f;
+
+		// Gera um vetor aleatório dentro da esfera unitária para simular superfície rugosa
 		Vector randomVec = random_in_unit_sphere();
+
+		// Soma o vetor refletido com o vetor aleatório ponderado para dar um efeito "fuzzy"
 		Vector fuzzyReflectDir = (reflectDir + randomVec * roughness).normalize();
+
+		// Cria um novo raio refletido, com pequeno deslocamento na direção da normal para evitar acne de superfície
 		Ray reflectRay(hitPoint + N * EPSILON, fuzzyReflectDir);
+
+		// Chama recursivamente a função de ray-tracing para obter a cor da reflexão
 		Color reflectColor = rayTracing(reflectRay, depth + 1, ior_1, lightSample);
 
-		// Multiply by the specular color and specular coefficient
+		// Multiplica a cor refletida pela cor especular e coeficiente especular do material
 		reflectColor *= mat->GetSpecColor() * mat->GetSpecular();
 
+		// Adiciona a cor refletida ao acumulador final de cor do pixel
 		color_Acc += reflectColor;
 	}
 
+	// ------------------------------ Refração com Fresnel ------------------------------
 
-	// Refraction with Fresnel using Schlick's Approximation
+	// Se profundidade da recursão menor que limite e material tem componente de transmissão (transparência)
 	if (depth < MAX_DEPTH && mat->GetTransmittance() > 0.0f) {
-		Vector I = ray.direction;
-		Vector n = N;
+		Vector I = ray.direction; // Direção do raio de entrada
+		Vector n = N;             // Normal da superfície no ponto de interseção
 
+		// Índices de refração do meio de entrada e do material
 		float eta_i = ior_1;
 		float eta_t = mat->GetRefrIndex();
 
+		// Calcula o cosseno do ângulo entre o raio e a normal, limitado entre -1 e 1
 		float cos_i = std::clamp(I * N, -1.0f, 1.0f);
+
+		// Verifica se o raio está dentro do objeto (inversão da normal e índices)
 		bool insideObject = cos_i < 0.0f;
 
 		if (insideObject) {
+			// Se dentro do objeto, usa índices como estão e inverte o sinal do cosseno
 			eta_i = ior_1;
 			eta_t = mat->GetRefrIndex();
 			n = N;
 			cos_i = -cos_i;
-		} else {
+		}
+		else {
+			// Se fora do objeto, inverte a normal e troca índices para simular saída do meio
 			eta_i = ior_1;
 			eta_t = 1.0f;
 			n = N * -1.0f;
 		}
 
+		// Calcula razão dos índices de refração
 		float eta = eta_i / eta_t;
+
+		// Calcula parâmetro k para determinar se há refração real ou reflexão total interna
 		float k = 1.0f - eta * eta * (1.0f - cos_i * cos_i);
 
-		// Fresnel with Schlick's Approximation
+		// Cálculo da reflexão usando aproximação de Schlick para o fator de Fresnel
 		float R0 = pow((eta_i - eta_t) / (eta_i + eta_t), 2.0f);
 		float k_r = R0 + (1.0f - R0) * pow(1.0f - cos_i, 5.0f);
 
-		Color attenuation(1.0f, 1.0f, 1.0f);
+		Color attenuation(1.0f, 1.0f, 1.0f); // Fator de atenuação (absorção)
+
 		if (!insideObject) {
-			// Apply Beer's Law
+			// Se estamos fora do objeto, aplica a Lei de Beer para absorção da luz no material
 			Color absorption = Color(1.0f, 1.0f, 1.0f) - mat->GetDiffColor();
-			attenuation = (absorption * (-closestHit.t)).exp_();
+			attenuation = (absorption * (-closestHit.t)).exp_(); // exp_() aplica exponencial para atenuação
 		}
 		else {
-			// Use diffuse color with no attenuation
+			// Se dentro do objeto, usa cor difusa do material sem atenuação
 			attenuation = mat->GetDiffColor();
 		}
 
 		if (k >= 0.0f) {
+			// Se k>=0, há refração (não houve reflexão total interna)
 			Vector refractDir = (I * eta + n * (eta * cos_i - sqrtf(k))).normalize();
-			Ray refractRay(hitPoint - n * EPSILON, refractDir);    // Fix acne spots
+
+			// Cria raio refratado saindo do ponto de interseção com pequeno deslocamento para evitar acne
+			Ray refractRay(hitPoint - n * EPSILON, refractDir);
+
+			// Recursivamente calcula cor da refração, multiplicando por atenuação e (1 - fator de reflexão)
 			Color refractColor = rayTracing(refractRay, depth + 1, eta_t, lightSample) * attenuation * (1.0f - k_r);
 
 			color_Acc += refractColor;
-		
-		} else {	// Total reflection
+
+		}
+		else {
+			// Caso contrário, ocorre reflexão total interna, o fator de reflexão é 1
 			k_r = 1.0f;
 		}
 
-		// Reflection contribution using Fresnel factor
+		// Cálculo da contribuição da reflexão usando o fator de Fresnel k_r
 		Vector reflectDir = I - n * 2.0f * (I * n);
 		reflectDir.normalize();
-		Ray reflectRay(hitPoint + n * EPSILON, reflectDir);    // Fix acne spots
+
+		// Cria raio refletido para o lado oposto com pequeno deslocamento para evitar acne
+		Ray reflectRay(hitPoint + n * EPSILON, reflectDir);
+
+		// Calcula recursivamente a cor da reflexão, ponderada pelo fator k_r e cor especular do material
 		Color reflectColor = rayTracing(reflectRay, depth + 1, eta_i, lightSample) * k_r * mat->GetSpecColor();
 
 		color_Acc += reflectColor;
 	}
 
+	// Retorna a cor final do pixel, limitando os valores para o intervalo válido (0 a 1)
 	return color_Acc.clamp();
 }
 
@@ -628,8 +690,6 @@ void renderScene()
 				else {	
 					pixel_sample.x = x + 0.5f;  
 					pixel_sample.y = y + 0.5f;
-
-					/////////PROGRAM THE FOLLOWING FUNCTION//////////////////////
 					Ray ray1 = scene->GetCamera()->PrimaryRay(pixel_sample);
 
 					Color accumulated_color(0.0f, 0.0f, 0.0f);
