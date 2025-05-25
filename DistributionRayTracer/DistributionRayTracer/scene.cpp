@@ -39,48 +39,55 @@ AABB Triangle::GetBoundingBox() {
 }
 
 
-//
-// Ray/Triangle intersection test using Tomas Moller-Ben Trumbore algorithm.
-//
+
+// HitRecord Triangle - Vê se há interseção entre um raio e um triângulo usando o algoritmo de Möller-Trumbore.
+// 1 - Este algoritmo calcula se e onde um raio intersecta a superfície de um triângulo, utilizando coordenadas baricêntricas.
+// 2 - Se houver interseção, devolve um `HitRecord` preenchido com a distância `t` ao ponto de impacto, a normal do triângulo e as coordenadas baricêntricas
+// do ponto de interseção. 
 
 HitRecord Triangle::hit(Ray& r) {
 	HitRecord rec;
-	rec.t = FLT_MAX;
-	rec.isHit = false;
+	rec.t = FLT_MAX;         
+	rec.isHit = false;       
 
-	Vector v0 = points[0];
-	Vector v1 = points[1];
-	Vector v2 = points[2];
+	Vector v0 = points[0];   
+	Vector v1 = points[1];   
+	Vector v2 = points[2];   
 
-	Vector edge1 = v1 - v0;
-	Vector edge2 = v2 - v0;
+	Vector edge1 = v1 - v0;  
+	Vector edge2 = v2 - v0;  
 
-	Vector h = r.direction % edge2;
-	float a = edge1 * h;
+	Vector h = r.direction % edge2;  
+	float a = edge1 * h;             
 
+	// Se 'a' for próximo de zero, o raio é paralelo ao plano do triângulo.
 	float f = 1.0f / a;
-	Vector s = r.origin - v0;
-	float u = f * (s * h);
+	Vector s = r.origin - v0;        // Vetor do ponto de origem do raio até o vértice v0.
+	float u = f * (s * h);           // Calcula a coordenada baricêntrica u.
 
+	// Se u estiver fora do intervalo [0,1], o ponto está fora do triângulo.
 	if (u < 0.0f || u > 1.0f)
 		return rec;
 
-	float v = (edge1 * (r.direction % s)) * f;
+	float v = (edge1 * (r.direction % s)) * f;  // Calcula a coordenada baricêntrica v.
 
+	// Se v for inválido ou u + v > 1, o ponto está fora do triângulo.
 	if (v < 0.0f || u + v > 1.0f)
 		return rec;
 
-	float t = (edge1 * (edge2 % s)) * f;
+	float t = (edge1 * (edge2 % s)) * f;  // Calcula a distância ao ponto de interseção.
 
+	// Se t > 0, há uma interseção válida à frente do raio.
 	if (t > 0.0) {
-		rec.t = t;
-		rec.isHit = true;
-		rec.normal = (edge1 % edge2).normalize();
-		rec.bary = Vector(1.0f - u - v, u, v);
+		rec.t = t;                                 // Guarda a distância.
+		rec.isHit = true;                          // Marca como interseção válida.
+		rec.normal = (edge1 % edge2).normalize();  // Normal do triângulo (não interpolada).
+		rec.bary = Vector(1.0f - u - v, u, v);     // Coordenadas baricêntricas no triângulo.
 	}
 
-	return rec;
+	return rec;  // Retorna o resultado (com isHit = true ou false).
 }
+
 
 
 
@@ -133,46 +140,51 @@ HitRecord Plane::hit( Ray& r)
 	return (rec);
 }
 
-HitRecord Sphere::hit(Ray& r)
-{
+
+
+// HitRecord Sphere - Verifica a interseção entre um raio e uma esfera usando a equação quadrática clássica.
+// 1 - Resolve a equação (P(t) - centro)^2 = raio^2, onde P(t) é a posição ao longo do raio.
+// Se houver interseção, retorna um HitRecord com a distância `t`, normal no ponto de impacto, e `isHit = true`. 
+
+HitRecord Sphere::hit(Ray& r) {
 	HitRecord rec;
-	rec.t = FLT_MAX;
-	rec.isHit = false;
+	rec.t = FLT_MAX;         
+	rec.isHit = false;       
 
-	// PUT YOUR CODE HERE - DONE
+	Vector oc = r.origin - center;  // Vetor do centro da esfera até a origem do raio.
 
-	Vector oc = r.origin - center;
+	// Coeficientes da equação quadrática: at^2 + bt + c = 0
+	float a = r.direction * r.direction;              // a = dir·dir
+	float b = 2.0f * (oc * r.direction);              // b = 2·(oc·dir)
+	float c = (oc * oc) - radius * radius;            // c = oc·oc - r^2
 
-	float a = r.direction * r.direction;
-	float b = 2.0f * (oc * r.direction);
-	float c = (oc * oc) - radius * radius;
-
-	float discriminant = b * b - 4.0f * a * c;
+	float discriminant = b * b - 4.0f * a * c;         // Discriminante para verificar interseção real
 
 	if (discriminant < 0.0f)
-		return rec;
+		return rec;  // Raiz negativa: sem interseção real.
 
-	float sqrtDisc = sqrt(discriminant);
-	float t1 = (-b - sqrtDisc) / (2.0f * a);
-	float t2 = (-b + sqrtDisc) / (2.0f * a);
+	float sqrtDisc = sqrt(discriminant);              // Raiz do discriminante
+	float t1 = (-b - sqrtDisc) / (2.0f * a);           // Solução menor (entrada na esfera)
+	float t2 = (-b + sqrtDisc) / (2.0f * a);           // Solução maior (saída da esfera)
 
 	float t;
-	if (t1 > EPSILON)
+	if (t1 > EPSILON)          // Se a primeira solução for válida (em frente ao raio)
 		t = t1;
-	else if (t2 > EPSILON)
+	else if (t2 > EPSILON)     // Se apenas a segunda for válida
 		t = t2;
 	else
-		return rec;
+		return rec;            // Ambas as interseções estão atrás da origem do raio
 
-	rec.t = t;
-	rec.isHit = true;
+	rec.t = t;                 // Armazena a distância ao ponto de interseção
+	rec.isHit = true;         
 
-	// Calcula ponto de interseção temporário
+	// Calcula o ponto de interseção e a normal
 	Vector hitPoint = r.origin + r.direction * t;
-	rec.normal = (hitPoint - center).normalize();
+	rec.normal = (hitPoint - center).normalize();     // Vetor normal à superfície no ponto de impacto
 
-	return rec;
+	return rec;  // Retorna informações da interseção
 }
+
 
 
 
@@ -193,20 +205,26 @@ AABB aaBox::GetBoundingBox() {
 	return(AABB(min, max));
 }
 
-HitRecord aaBox::hit(Ray& ray)
-{
+
+// HitRecord aaBox - Verifica a interseção entre um raio e uma AABB.
+// 1 - Utiliza o método de slab para calcular as distâncias de entrada (tE) e saída (tL) em cada eixo.
+// 2 - Se o raio intersectar todos os slabs simultaneamente, considera-se um hit.
+// Retorna um HitRecord com a distância e a normal da face de entrada ou saída.
+
+HitRecord aaBox::hit(Ray& ray) {
 	HitRecord rec;
 	rec.t = FLT_MAX;
 	rec.isHit = false;
 
+	// Componentes da direção do raio
 	float a = ray.direction.x;
 	float b = ray.direction.y;
 	float c = ray.direction.z;
 
-	// Compute slab intersection distances for each axis
+	// Calcula as interseções com os planos (slabs) em cada eixo
 	float tx_min = (min.x - ray.origin.x) / a;
 	float tx_max = (max.x - ray.origin.x) / a;
-	if (tx_min > tx_max) std::swap(tx_min, tx_max);
+	if (tx_min > tx_max) std::swap(tx_min, tx_max); // Garante que min < max
 
 	float ty_min = (min.y - ray.origin.y) / b;
 	float ty_max = (max.y - ray.origin.y) / b;
@@ -216,24 +234,24 @@ HitRecord aaBox::hit(Ray& ray)
 	float tz_max = (max.z - ray.origin.z) / c;
 	if (tz_min > tz_max) std::swap(tz_min, tz_max);
 
-	float tE, tL;
-	Vector face_in, face_out;
+	float tE, tL;               // tE = entrada, tL = saída
+	Vector face_in, face_out;  // Normais das faces de entrada e saída
 
-	// Find largest tE (entering point)
+	// Determina o maior tE (última entrada)
 	if (tx_min > ty_min) {
 		tE = tx_min;
-		face_in = (a >= 0.0f) ? Vector(-1, 0, 0) : Vector(1, 0, 0);
+		face_in = (a >= 0.0f) ? Vector(-1, 0, 0) : Vector(1, 0, 0);  // Face esquerda ou direita
 	}
 	else {
 		tE = ty_min;
-		face_in = (b >= 0.0f) ? Vector(0, -1, 0) : Vector(0, 1, 0);
+		face_in = (b >= 0.0f) ? Vector(0, -1, 0) : Vector(0, 1, 0);  // Face inferior ou superior
 	}
 	if (tz_min > tE) {
 		tE = tz_min;
-		face_in = (c >= 0.0f) ? Vector(0, 0, -1) : Vector(0, 0, 1);
+		face_in = (c >= 0.0f) ? Vector(0, 0, -1) : Vector(0, 0, 1);  // Face traseira ou frontal
 	}
 
-	// Find smallest tL (leaving point)
+	// Determina o menor tL (primeira saída)
 	if (tx_max < ty_max) {
 		tL = tx_max;
 		face_out = (a >= 0.0f) ? Vector(1, 0, 0) : Vector(-1, 0, 0);
@@ -247,23 +265,23 @@ HitRecord aaBox::hit(Ray& ray)
 		face_out = (c >= 0.0f) ? Vector(0, 0, 1) : Vector(0, 0, -1);
 	}
 
-	// Check for a valid hit
+	// Verifica se há interseção válida
 	if (tE < tL && tL > 0.0f) {
 		rec.isHit = true;
 		if (tE > 0.0f) {
 			rec.t = tE;
-			rec.normal = face_in;
+			rec.normal = face_in;  // Raio entra na caixa
 		}
 		else {
 			rec.t = tL;
-			rec.normal = face_out;
+			rec.normal = face_out; // Raio começa dentro e sai
 		}
-
 		return rec;
 	}
 
-	return rec; // no hit
+	return rec;  // Sem interseção válida
 }
+
 
 
 Scene::Scene()
