@@ -108,6 +108,7 @@ void BVH::build_recursive(int left_index, int right_index, BVHNode* node) {
 		}
 		};
 
+	//Calcular coordenada média dos centroides
 	float split_coord = 0.0f;
 	for (int i = left_index; i < right_index; ++i) {
 		split_coord += getCoord(objects[i]->GetBoundingBox().centroid(), axis);
@@ -166,50 +167,51 @@ void BVH::build_recursive(int left_index, int right_index, BVHNode* node) {
 // Retorna `true` se algum objeto for atingido pelo raio; caso contrário, retorna `false`.
 
 bool BVH::Traverse(Ray& ray, Object** hit_obj, HitRecord& hitRec) {
-	float t_closest = FLT_MAX;          // Guarda o t mais próximo encontrado
+	float t_closest = FLT_MAX;          // Inicializa a menor distância (t) como o máximo possível
 	bool hit = false;                   
-	stack<StackItem> hit_stack;         
-	BVHNode* currentNode = nodes[0];    // Começa pela raiz da árvore
+	stack<StackItem> hit_stack;         // Stack auxiliar para navegação não-recursiva na árvore
+	BVHNode* currentNode = nodes[0];    // Começa pela raiz da árvore BVH
 
 	float root_t = FLT_MAX;
 
-	// Se o raio não intersecta a AABB da raiz, não há colisão
+	// Verifica se o raio intersecta a bounding box da raiz. Se não, não há colisão possível.
 	if (!currentNode->getAABB().hit(ray, root_t))
 		return false;
 
 	while (true) {
 		if (!currentNode->isLeaf()) {
-			// Nó interno: obter filhos esquerdo e direito
-			BVHNode* left = nodes[currentNode->getIndex()];
-			BVHNode* right = nodes[currentNode->getIndex() + 1];
+			// Se o nó não for folha, é um nó interno: obtemos seus filhos esquerdo e direito.
+			BVHNode* left = nodes[currentNode->getIndex()];         // Filho esquerdo
+			BVHNode* right = nodes[currentNode->getIndex() + 1];    // Filho direito
 
 			float t_left = FLT_MAX, t_right = FLT_MAX;
-			bool hit_left = left->getAABB().hit(ray, t_left);
-			bool hit_right = right->getAABB().hit(ray, t_right);
+			bool hit_left = left->getAABB().hit(ray, t_left);       // Testa interseção do raio com o AABB da esquerda
+			bool hit_right = right->getAABB().hit(ray, t_right);    // Testa interseção com o da direita
 
 			if (hit_left && hit_right) {
-				// Ambos filhos atingidos: prioriza o mais próximo, empilha o outro
+				// Se ambos os filhos forem atingidos, processamos primeiro o mais próximo
 				if (t_left < t_right) {
-					hit_stack.push(StackItem(right, t_right));
-					currentNode = left;
+					hit_stack.push(StackItem(right, t_right)); 
+					currentNode = left;                         
 				}
 				else {
 					hit_stack.push(StackItem(left, t_left));
 					currentNode = right;
 				}
 			}
-			else if (hit_left) currentNode = left;
-			else if (hit_right) currentNode = right;
-			else goto pop_stack;
+			else if (hit_left) currentNode = left;     // Só o filho esquerdo foi atingido
+			else if (hit_right) currentNode = right;   // Só o filho direito foi atingido
+			else goto pop_stack;                       // Nenhum filho foi atingido, tenta retomar da stack
 		}
 		else {
-			// Nó folha: verificar colisões com cada objeto
-			unsigned int start = currentNode->getIndex();
-			unsigned int count = currentNode->getNObjs();
+			// Se for um nó folha, testa colisão com todos os objetos contidos no nó
+			unsigned int start = currentNode->getIndex();   // Índice inicial dos objetos no vetor
+			unsigned int count = currentNode->getNObjs();   // Quantos objetos existem neste nó
 
 			for (unsigned int i = 0; i < count; ++i) {
-				HitRecord tempRec = objects[start + i]->hit(ray);
+				HitRecord tempRec = objects[start + i]->hit(ray);  // Testa interseção com cada objeto
 				if (tempRec.isHit && tempRec.t < t_closest) {
+					// Se houver interseção mais próxima do que a anterior, atualiza o hitRecord e objeto
 					t_closest = tempRec.t;
 					hitRec = tempRec;
 					*hit_obj = objects[start + i];
@@ -218,22 +220,23 @@ bool BVH::Traverse(Ray& ray, Object** hit_obj, HitRecord& hitRec) {
 			}
 
 		pop_stack:
-			// Retomar nós empilhados
+			// Se o nó atual foi totalmente processado, tenta continuar com outro nó da stack
 			while (!hit_stack.empty()) {
-				StackItem item = hit_stack.top();
+				StackItem item = hit_stack.top(); //  próximo nó mais próximo armazenado
 				hit_stack.pop();
 				if (item.t < t_closest) {
+					// Se esse nó está mais perto do que o que já foi atingido, continua a busca
 					currentNode = item.ptr;
-					goto continue_loop;
+					goto continue_loop;  // Volta ao topo do loop para processar esse nó
 				}
 			}
-			break; // stack vazia: fim do traverse
+			break; // Se a stack estiver vazia, termina 
 		}
 
-	continue_loop:;
+	continue_loop:; 
 	}
 
-	return hit; // true se algum objeto foi atingido
+	return hit; // Retorna true se algum objeto foi atingido
 }
 
 
@@ -247,20 +250,25 @@ bool BVH::Traverse(Ray& ray, Object** hit_obj, HitRecord& hitRec) {
 // Retorna `true` se houver algum objeto entre o ponto e a luz (há sombra), e `false` se o caminho estiver livre.
 
 bool BVH::Traverse(Ray& ray) {
-	stack<StackItem> hit_stack;
+	stack<StackItem> hit_stack;  
 
-	double length = ray.direction.length(); // Distância até a fonte de luz
+	// Calcula o comprimento original do raio (distância até a fonte de luz)
+	double length = ray.direction.length();
+
+	
 	Vector dir = ray.direction.normalize();
-	Ray shadowRay(ray.origin, dir); // Ray normalizado para uso local
+	Ray shadowRay(ray.origin, dir);  // Cria um novo raio com direção unitária
 
-	BVHNode* currentNode = nodes[0];
+	BVHNode* currentNode = nodes[0];  // Começa pela raiz da árvore BVH
 	float root_t = FLT_MAX;
 
+	// Se o raio não intersecta a AABB da raiz, então não há bloqueio
 	if (!currentNode->getAABB().hit(shadowRay, root_t))
-		return false; // Nenhuma interseção com a raiz
+		return false;
 
 	while (true) {
 		if (!currentNode->isLeaf()) {
+			// Nó interno: verificar interseção com os AABBs dos filhos
 			BVHNode* left = nodes[currentNode->getIndex()];
 			BVHNode* right = nodes[currentNode->getIndex() + 1];
 
@@ -269,8 +277,9 @@ bool BVH::Traverse(Ray& ray) {
 			bool hit_right = right->getAABB().hit(shadowRay, t_right);
 
 			if (hit_left && hit_right) {
+				// Se ambos forem atingidos, processar primeiro o mais próximo
 				if (t_left < t_right) {
-					hit_stack.push(StackItem(right, t_right));
+					hit_stack.push(StackItem(right, t_right)); // Adia processamento do mais distante
 					currentNode = left;
 				}
 				else {
@@ -278,38 +287,40 @@ bool BVH::Traverse(Ray& ray) {
 					currentNode = right;
 				}
 			}
-			else if (hit_left) currentNode = left;
-			else if (hit_right) currentNode = right;
-			else goto pop_stack;
+			else if (hit_left) currentNode = left;   // Só o filho esquerdo foi atingido
+			else if (hit_right) currentNode = right; // Só o filho direito foi atingido
+			else goto pop_stack;                     // Nenhum filho atingido, tenta próximo da stack
 		}
 		else {
+			// Nó folha: testar interseção com cada objeto contido neste nó
 			unsigned int start = currentNode->getIndex();
 			unsigned int count = currentNode->getNObjs();
 
 			for (unsigned int i = 0; i < count; ++i) {
 				HitRecord tempRec = objects[start + i]->hit(shadowRay);
 
-				// Qualquer colisão válida dentro da distância para a luz bloqueia a luz (sombra)
+				// Se houve interseção válida antes da luz, há bloqueio => sombra
 				if (tempRec.isHit && tempRec.t > EPSILON && tempRec.t < length)
-					return true; // Está na sombra
+					return true; // Raio foi bloqueado antes de chegar à luz
 			}
 
 		pop_stack:
+			// Retoma da stack se houver nós ainda não processados
 			while (!hit_stack.empty()) {
 				StackItem item = hit_stack.top();
 				hit_stack.pop();
-				if (item.t < length) {
+				if (item.t < length) { // Só continua se o nó estiver dentro do alcance da luz
 					currentNode = item.ptr;
-					goto continue_loop;
+					goto continue_loop; 
 				}
 			}
 
-			break; // stack vazia, fim
+			break; // Se a stack estiver vazia, termina
 		}
 
-	continue_loop:;
+	continue_loop:; 
 	}
 
-	return false; // Sem interseção: está iluminado
+	return false; // Nenhum objeto bloqueou o raio: o ponto está iluminado
 }
 

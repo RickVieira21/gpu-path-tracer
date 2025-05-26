@@ -286,12 +286,14 @@ void timer(int value)
 Vector random_in_unit_sphere() {
 	Vector p;
 	do {
+		// Gera um vetor com coordenadas x, y e z aleatórias no intervalo [-1.0, 1.0], o que define um cubo de lado 2 centrado na origem.
 		p = Vector(rand_float() * 2.0f - 1.0f,
-			rand_float() * 2.0f - 1.0f,
+			rand_float() * 2.0f - 1.0f, //Ao multiplicar por 2 e subtrair 1, as coordenadas vão de - 1.0 a 1.0
 			rand_float() * 2.0f - 1.0f);
-	} while (p.lengthSquared() >= 1.0f);
-	return p;
+	} while (p.lengthSquared() >= 1.0f); // Repete até o ponto estar dentro da esfera unitária
+	return p; // Retorna o vetor aleatório dentro da esfera
 }
+
 
 
 Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index of refraction of medium 1 where the ray is travelling
@@ -358,19 +360,17 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 	hitPoint = ray.origin + ray.direction * closestHit.t;
 	N = closestHit.normal;
 
-	// CALCULAR A COR DO PIXEL (Modelo de Reflexão Blinn-Phong)
-	Material* mat = hitObj->GetMaterial(); // Obtém o material do objeto que foi atingido pelo raio
+	// ------------ Modelo de Reflexão Blinn-Phong (calcular cor do pixel) -----------
+
+	Material* mat = hitObj->GetMaterial(); 
 	Vector V = ray.direction * -1.0f;      // Vetor que aponta do ponto de interseção para a origem da câmera (visualização)
 
 	// Percorre todas as luzes da cena para calcular a contribuição de cada uma
 	for (int j = 0; j < num_lights; j++) {
 		Light* light = scene->getLight(j); // Obtém a luz j da cena
 
-		// Vetor do ponto atingido para a posição da luz (direção da luz)
-		Vector L = (light->position - hitPoint).normalize();
-
-		// Vetor "meio-termo" para o modelo Blinn-Phong: direção média entre a luz e a visão
-		Vector H = (L + V).normalize();
+		Vector L = (light->position - hitPoint).normalize(); // Vetor do ponto atingido para a posição da luz (direção da luz)
+		Vector H = (L + V).normalize(); // Vetor "halfway" para o modelo Blinn-Phong: direção média entre a luz e a visão
 
 		// ---------- Início Soft Shadows ----------
 		 
@@ -380,7 +380,6 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 		Color diffuseTotal(0.0f, 0.0f, 0.0f);
 		Color specularTotal(0.0f, 0.0f, 0.0f);
 
-		// Loop para amostrar diferentes pontos na área da luz (para simular luzes com área e sombras suaves)
 		for (int s = 0; s < numShadowSamples; s++) {
 			Vector jitter; 
 
@@ -401,7 +400,7 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 			// Vetor do ponto atingido para o ponto na área da luz (não normalizado ainda)
 			Vector L = lightPoint - hitPoint;
 
-			// Recalcula vetor "meio-termo" para este ponto específico da luz
+			// Recalcula vetor "halfway" para este ponto específico da luz
 			Vector H = (L + V).normalize();
 
 			// Cria um raio sombra saindo do ponto de interseção na direção da luz
@@ -438,7 +437,7 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 				// Produto escalar entre normal da superfície e direção da luz
 				float NdotL = std::max(0.0f, N * L);
 
-				// Produto escalar entre normal da superfície e vetor meio-termo para reflexão especular
+				// Produto escalar entre normal da superfície e vetor halfway para reflexão especular
 				float NdotH = std::max(0.0f, N * H);
 
 				// Contribuição difusa: cor difusa do material * luz * NdotL * coeficiente difuso do material
@@ -451,6 +450,7 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 
 		// Após somar todas as amostras, adiciona média das contribuições ao acumulador final de cor
 		color_Acc += (diffuseTotal + specularTotal) * (1.0f / numShadowSamples);
+		// Fim soft shadows ----------
 	}
 
 	// ------------------------------ Reflexão ------------------------------
@@ -552,7 +552,7 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 			k_r = 1.0f;
 		}
 
-		// Cálculo da contribuição da reflexão usando o fator de Fresnel k_r
+		// Reflexão com fator Fresnel- cálculo da contribuição da reflexão usando o fator de Fresnel k_r
 		Vector reflectDir = I - n * 2.0f * (I * n);
 		reflectDir.normalize();
 
