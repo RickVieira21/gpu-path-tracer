@@ -229,25 +229,23 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         // Lambertian scatter
         vec3 scatterDirection = rec.normal + randomUnitVector(gSeed);
 
-        // Se vetor muito próximo de zero
+        // Corrige caso o vetor seja quase zero
         if (length(scatterDirection) < 1e-8)
             scatterDirection = rec.normal;
 
-        rScattered = Ray(rec.p, scatterDirection);
-
-        // Atenuação com o cos(θ) e normalização por PI
+        rScattered = createRay(rec.pos, scatterDirection);  // <-- usa createRay
         atten = rec.material.albedo * max(dot(normalize(rScattered.d), rec.normal), 0.0) / 3.141592;
         return true;
     }
 
     if (rec.material.type == MT_METAL)
     {
-        // Reflected ray + fuzziness
         vec3 reflected = reflect(normalize(rIn.d), rec.normal);
         vec3 scatteredDir = reflected + rec.material.roughness * randomInUnitSphere(gSeed);
-        rScattered = Ray(rec.p, scatteredDir);
 
+        rScattered = createRay(rec.pos, scatteredDir);
         atten = rec.material.specColor;
+
         return dot(rScattered.d, rec.normal) > 0.0;
     }
 
@@ -258,38 +256,37 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         float niOverNt;
         float cosine;
 
-        if (dot(rIn.d, rec.normal) > 0.0) // Raio vindo de dentro
+        vec3 rdNorm = normalize(rIn.d);
+
+        if (dot(rdNorm, rec.normal) > 0.0)
         {
             outwardNormal = -rec.normal;
             niOverNt = rec.material.refIdx;
-            cosine = rec.material.refIdx * dot(rIn.d, rec.normal);
+            cosine = rec.material.refIdx * dot(rdNorm, rec.normal);
 
-            // Lei de Beer: absorção dentro do material
-            float dist = length(rIn.d); // pode ser ajustado
+            float dist = length(rIn.d); // distância percorrida (opcional, se quiseres ajustar)
             atten = exp(-rec.material.refractColor * dist);
         }
-        else  // Raio vindo de fora
+        else
         {
             outwardNormal = rec.normal;
             niOverNt = 1.0 / rec.material.refIdx;
-            cosine = -dot(rIn.d, rec.normal);
+            cosine = -dot(rdNorm, rec.normal);
         }
 
-        vec3 refracted;
-        bool canRefract = refract(normalize(rIn.d), outwardNormal, niOverNt, refracted);
+        vec3 refracted = refract(rdNorm, outwardNormal, niOverNt);
+        bool canRefract = length(refracted) > 0.0001;
 
         float reflectProb = canRefract ? schlick(cosine, rec.material.refIdx) : 1.0;
 
         if (hash1(gSeed) < reflectProb)
         {
-            // Reflected ray
-            vec3 reflected = reflect(normalize(rIn.d), rec.normal);
-            rScattered = Ray(rec.p, reflected);
+            vec3 reflected = reflect(rdNorm, rec.normal);
+            rScattered = createRay(rec.pos, reflected);
         }
         else
         {
-            // Refracted ray
-            rScattered = Ray(rec.p, refracted);
+            rScattered = createRay(rec.pos, refracted);
         }
 
         return true;
@@ -311,26 +308,28 @@ Triangle createTriangle(vec3 v0, vec3 v1, vec3 v2)
 // done
 bool hit_triangle(Triangle t, Ray r, float tmin, float tmax, out HitRecord rec)
 {
-    
-    Vec3 v0 = t.v0;
-    Vec3 v1 = t.v1;
-    Vec3 v2 = t.v2;
+    vec3 v0 = t.a;
+    vec3 v1 = t.b;
+    vec3 v2 = t.c;
 
-    Vec3 edge1 = v1 - v0;
-    Vec3 edge2 = v2 - v0;
+    vec3 edge1 = v1 - v0;
+    vec3 edge2 = v2 - v0;
 
-    Vec3 h = cross(r.dir, edge2);
+    vec3 h = cross(r.d, edge2);
     float a = dot(edge1, h);
 
+    //if (abs(a) < 1e-8)
+    //    return false; // Raio paralelo ao triângulo
+
     float f = 1.0 / a;
-    Vec3 s = r.orig - v0;
+    vec3 s = r.o - v0;
     float u = f * dot(s, h);
 
     if (u < 0.0 || u > 1.0)
         return false;
 
-    Vec3 q = cross(s, edge1);
-    float v = f * dot(r.dir, q);
+    vec3 q = cross(s, edge1);
+    float v = f * dot(r.d, q);
 
     if (v < 0.0 || u + v > 1.0)
         return false;
@@ -342,10 +341,12 @@ bool hit_triangle(Triangle t, Ray r, float tmin, float tmax, out HitRecord rec)
 
     // Interseção válida
     rec.t = t_intersect;
-    rec.pos = pointOnRay(r, rec.t);
-    rec.normal = normalize(cross(edge1, edge2)); // normal do triângulo
+    rec.pos = r.o + t_intersect * r.d;
+    rec.normal = normalize(cross(edge1, edge2));
+
     return true;
 }
+
 
 
 struct Quad {vec3 a; vec3 b; vec3 c; vec3 d; };
