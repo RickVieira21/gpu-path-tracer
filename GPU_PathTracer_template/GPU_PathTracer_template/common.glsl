@@ -289,16 +289,40 @@ Triangle createTriangle(vec3 v0, vec3 v1, vec3 v2)
 
 bool hit_triangle(Triangle t, Ray r, float tmin, float tmax, out HitRecord rec)
 {
-    //INSERT YOUR CODE HERE
-    //calculate a valid t and normal
-    if(t < tmax && t > tmin)
-    {
-        rec.t = t;
-        rec.normal = normal;
-        rec.pos = pointOnRay(r, rec.t);
-        return true;
-    }
-    return false;
+    
+    Vec3 v0 = t.v0;
+    Vec3 v1 = t.v1;
+    Vec3 v2 = t.v2;
+
+    Vec3 edge1 = v1 - v0;
+    Vec3 edge2 = v2 - v0;
+
+    Vec3 h = cross(r.dir, edge2);
+    float a = dot(edge1, h);
+
+    float f = 1.0 / a;
+    Vec3 s = r.orig - v0;
+    float u = f * dot(s, h);
+
+    if (u < 0.0 || u > 1.0)
+        return false;
+
+    Vec3 q = cross(s, edge1);
+    float v = f * dot(r.dir, q);
+
+    if (v < 0.0 || u + v > 1.0)
+        return false;
+
+    float t_intersect = f * dot(edge2, q);
+
+    if (t_intersect < tmin || t_intersect > tmax)
+        return false;
+
+    // Interseção válida
+    rec.t = t_intersect;
+    rec.pos = pointOnRay(r, rec.t);
+    rec.normal = normalize(cross(edge1, edge2)); // normal do triângulo
+    return true;
 }
 
 
