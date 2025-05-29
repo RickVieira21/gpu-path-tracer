@@ -132,6 +132,7 @@ Camera createCamera(
     return cam;
 }
 
+// done
 Ray getRay(Camera cam, vec2 pixel_sample)  //rnd pixel_sample viewport coordinates
 {
     vec2 ls = cam.lensRadius * randomInUnitDisk(gSeed);  //ls - lens sample for DOF
@@ -211,7 +212,7 @@ struct HitRecord
     Material material;
 };
 
-
+// done
 float schlick(float cosine, float refIdx)
 {
     float ior1 = 1.0;
@@ -307,6 +308,7 @@ Triangle createTriangle(vec3 v0, vec3 v1, vec3 v2)
     return t;
 }
 
+// done
 bool hit_triangle(Triangle t, Ray r, float tmin, float tmax, out HitRecord rec)
 {
     
@@ -396,10 +398,11 @@ MovingSphere createMovingSphere(vec3 center0, vec3 center1, float radius, float 
     return s;
 }
 
+// done
 vec3 center(MovingSphere mvsphere, float time)
 {
-	//Program it
-    return moving_center;
+    float t = (time - mvsphere.time0) / (mvsphere.time1 - mvsphere.time0);
+    return mix(mvsphere.center0, mvsphere.center1, clamp(t, 0.0, 1.0));
 }
 
 
@@ -407,7 +410,7 @@ vec3 center(MovingSphere mvsphere, float time)
  * The function naming convention changes with these functions to show that they implement a sort of interface for
  * the book's notion of "hittable". E.g. hit_<type>.
  */
-
+// done
 bool hit_sphere(Sphere s, Ray r, float tmin, float tmax, out HitRecord rec)
 {
     vec3 oc = r.o - s.center;
@@ -448,24 +451,49 @@ bool hit_sphere(Sphere s, Ray r, float tmin, float tmax, out HitRecord rec)
     return false;
 }
 
+// done
 bool hit_movingSphere(MovingSphere s, Ray r, float tmin, float tmax, out HitRecord rec)
 {
-    float B, C, delta;
-    bool outside;
-    float t;
+    // 1. Interpolate the center at the ray's time
+    float timeFraction = (r.t - s.time0) / (s.time1 - s.time0);
+    vec3 center = mix(s.center0, s.center1, clamp(timeFraction, 0.0, 1.0));  // Linear interpolation
 
+    // 2. Ray-sphere intersection (same as static sphere)
+    vec3 oc = r.o - center;
+    float a = dot(r.d, r.d);
+    float b = dot(oc, r.d);
+    float c = dot(oc, oc) - s.radius * s.radius;
+    float discriminant = b * b - a * c;
 
-     //INSERT YOUR CODE HERE
-     //Calculate the moving center
-    //calculate a valid t and normal
-	
-    if(t < tmax && t > tmin) {
-        rec.t = t;
-        rec.pos = pointOnRay(r, rec.t);
-        rec.normal = normal;
-        return true;
+    if (discriminant > 0.0) {
+        float sqrtD = sqrt(discriminant);
+
+        float temp = (-b - sqrtD) / a;
+        if (temp < tmax && temp > tmin) {
+            rec.t = temp;
+            rec.pos = pointOnRay(r, rec.t);
+            rec.normal = (rec.pos - center) / s.radius;
+
+            // Flip normal if hitting from inside
+            bool frontFace = dot(r.d, rec.normal) < 0.0;
+            rec.normal = frontFace ? rec.normal : -rec.normal;
+
+            return true;
+        }
+
+        temp = (-b + sqrtD) / a;
+        if (temp < tmax && temp > tmin) {
+            rec.t = temp;
+            rec.pos = pointOnRay(r, rec.t);
+            rec.normal = (rec.pos - center) / s.radius;
+
+            bool frontFace = dot(r.d, rec.normal) < 0.0;
+            rec.normal = frontFace ? rec.normal : -rec.normal;
+
+            return true;
+        }
     }
-    else return false;
+    return false;
 }
 
 struct pointLight {
