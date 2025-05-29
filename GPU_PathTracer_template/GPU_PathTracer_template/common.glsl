@@ -138,8 +138,16 @@ Ray getRay(Camera cam, vec2 pixel_sample)  //rnd pixel_sample viewport coordinat
     float time = cam.time0 + hash1(gSeed) * (cam.time1 - cam.time0);
     
     //Calculate eye_offset and ray direction
+    vec3 offset = cam.u * ls.x + cam.v * ls.y;
+    vec3 eye_offset = cam.eye + offset;
 
-    return createRay(eye_offset, normalize(ray direction), time);
+    // Calcula o ponto alvo no plano de foco usando as coordenadas do pixel_sample
+    vec3 target = cam.eye - cam.n * cam.focusDist + cam.u * (pixel_sample.x * cam.width)
+                + cam.v * (pixel_sample.y * cam.height);
+
+    vec3 ray_direction = normalize(target - eye_offset);
+
+    return createRay(eye_offset, normalize(ray_direction), time);
 }
 
 // MT_ material type
@@ -207,6 +215,10 @@ struct HitRecord
 float schlick(float cosine, float refIdx)
 {
     //INSERT YOUR CODE HERE
+    float ior1 = 1.0;
+    float reflect0 = (ior1 - refIdx) / (ior1 + refIdx);
+    float r0 = reflect0 * reflect0;
+    return r0 + (1.0 - r0) * pow(1.0 - cosine, 5.0);
 }
 
 bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
@@ -251,12 +263,14 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         //if no total reflection  reflectProb = schlick(cosine, rec.material.refIdx);  
         //else reflectProb = 1.0;
 
-        if( hash1(gSeed) < reflectProb)  //Reflection
-        // rScattered = calculate reflected ray
-         
-        //else  //Refraction
-        // rScattered = calculate refracted ray
-          
+        if(hash1(gSeed) < reflectProb)  //Reflection
+        {
+            vec3 reflected = reflect(normalize(rIn.d), rec.normal);
+            rScattered = createRay(rec.pos + epsilon * rec.normal, reflected, rIn.t);
+        }
+        else
+        {
+            rScattered = createRay(rec.pos - epsilon * outwardNormal, normalize(refracted), rIn.t);
         }
 
         return true;
