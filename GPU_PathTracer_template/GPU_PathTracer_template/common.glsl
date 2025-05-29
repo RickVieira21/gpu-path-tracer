@@ -214,69 +214,89 @@ struct HitRecord
 
 float schlick(float cosine, float refIdx)
 {
-    //INSERT YOUR CODE HERE
     float ior1 = 1.0;
     float reflect0 = (ior1 - refIdx) / (ior1 + refIdx);
     float r0 = reflect0 * reflect0;
     return r0 + (1.0 - r0) * pow(1.0 - cosine, 5.0);
 }
 
+
 bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
 {
-    if(rec.material.type == MT_DIFFUSE)
+    if (rec.material.type == MT_DIFFUSE)
     {
-        //INSERT CODE HERE,
-        atten = rec.material.albedo * max(dot(rScattered.d, rec.normal), 0.0) / pi;
+        // Lambertian scatter
+        vec3 scatterDirection = rec.normal + randomUnitVector(gSeed);
+
+        // Se vetor muito próximo de zero
+        if (length(scatterDirection) < 1e-8)
+            scatterDirection = rec.normal;
+
+        rScattered = Ray(rec.p, scatterDirection);
+
+        // Atenuação com o cos(θ) e normalização por PI
+        atten = rec.material.albedo * max(dot(normalize(rScattered.d), rec.normal), 0.0) / 3.141592;
         return true;
     }
-    if(rec.material.type == MT_METAL)
+
+    if (rec.material.type == MT_METAL)
     {
-       //INSERT CODE HERE, consider fuzzy reflections
+        // Reflected ray + fuzziness
+        vec3 reflected = reflect(normalize(rIn.d), rec.normal);
+        vec3 scatteredDir = reflected + rec.material.roughness * randomInUnitSphere(gSeed);
+        rScattered = Ray(rec.p, scatteredDir);
+
         atten = rec.material.specColor;
-        return true;
+        return dot(rScattered.d, rec.normal) > 0.0;
     }
-    if(rec.material.type == MT_DIELECTRIC)
+
+    if (rec.material.type == MT_DIELECTRIC)
     {
         atten = vec3(1.0);
         vec3 outwardNormal;
         float niOverNt;
         float cosine;
 
-        if(dot(rIn.d, rec.normal) > 0.0) //hit inside
+        if (dot(rIn.d, rec.normal) > 0.0) // Raio vindo de dentro
         {
             outwardNormal = -rec.normal;
             niOverNt = rec.material.refIdx;
-            cosine = refraction cosine for schlick; 
-            atten = apply Beer's law by using rec.material.refractColor
+            cosine = rec.material.refIdx * dot(rIn.d, rec.normal);
+
+            // Lei de Beer: absorção dentro do material
+            float dist = length(rIn.d); // pode ser ajustado
+            atten = exp(-rec.material.refractColor * dist);
         }
-        else  //hit from outside
+        else  // Raio vindo de fora
         {
             outwardNormal = rec.normal;
             niOverNt = 1.0 / rec.material.refIdx;
-            cosine = -dot(rIn.d, rec.normal); 
+            cosine = -dot(rIn.d, rec.normal);
         }
 
-        //Use probabilistic math to decide if scatter a reflected ray or a refracted ray
+        vec3 refracted;
+        bool canRefract = refract(normalize(rIn.d), outwardNormal, niOverNt, refracted);
 
-        float reflectProb;
+        float reflectProb = canRefract ? schlick(cosine, rec.material.refIdx) : 1.0;
 
-        //if no total reflection  reflectProb = schlick(cosine, rec.material.refIdx);  
-        //else reflectProb = 1.0;
-
-        if(hash1(gSeed) < reflectProb)  //Reflection
+        if (hash1(gSeed) < reflectProb)
         {
+            // Reflected ray
             vec3 reflected = reflect(normalize(rIn.d), rec.normal);
-            rScattered = createRay(rec.pos + epsilon * rec.normal, reflected, rIn.t);
+            rScattered = Ray(rec.p, reflected);
         }
         else
         {
-            rScattered = createRay(rec.pos - epsilon * outwardNormal, normalize(refracted), rIn.t);
+            // Refracted ray
+            rScattered = Ray(rec.p, refracted);
         }
 
         return true;
     }
+
     return false;
 }
+
 
 struct Triangle {vec3 a; vec3 b; vec3 c; };
 
