@@ -202,8 +202,27 @@ vec3 directlighting(pointLight pl, Ray r, HitRecord rec){
     float shininess;
     HitRecord dummy;
 
-   //INSERT YOUR CODE HERE
+    //INSERT YOUR CODE HERE
+    vec3 lightDir = normalize(pl.pos - rec.pos);
+    vec3 viewDir = normalize(-r.d);
+    vec3 reflectDir = reflect(-lightDir, rec.normal);
+
+    float diff = max(dot(rec.normal, lightDir), 0.0);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+
+    vec3 lightColor = pl.color;
     
+    // Testa sombra
+    Ray shadowRay = createRay(rec.pos + rec.normal * 0.001, lightDir);
+    if(hit_world(shadowRay, 0.001, length(pl.pos - rec.pos), dummy)) {
+        return vec3(0.0); // Está na sombra
+    }
+
+    // Cálculo final
+    diffCol = rec.material.albedo * diff;
+    specCol = vec3(1.0) * spec; // especular branco simples
+    colorOut = (diffCol + specCol) * lightColor;
+
 	return colorOut; 
 }
 
@@ -219,19 +238,25 @@ vec3 rayColor(Ray r)
         if(hit_world(r, 0.001, 10000.0, rec))
         {
             //calculate direct lighting with 3 white point lights:
-            {
-                //createPointLight(vec3(-10.0, 15.0, 0.0), vec3(1.0, 1.0, 1.0))
-                //createPointLight(vec3(8.0, 15.0, 3.0), vec3(1.0, 1.0, 1.0))
-                //createPointLight(vec3(1.0, 15.0, -9.0), vec3(1.0, 1.0, 1.0))
+            col += directlighting(createPointLight(vec3(-10.0, 15.0, 0.0), vec3(1.0)), r, rec) * throughput;
+            col += directlighting(createPointLight(vec3(8.0, 15.0, 3.0), vec3(1.0)), r, rec) * throughput;
+            col += directlighting(createPointLight(vec3(1.0, 15.0, -9.0), vec3(1.0)), r, rec) * throughput;
 
-                //for instance: col += directlighting(createPointLight(vec3(-10.0, 15.0, 0.0), vec3(1.0, 1.0, 1.0)), r, rec) * throughput;
-            }
-           
+            // Emissão (caso o material seja emissivo, como luzes)
+            col += throughput * rec.material.emissive;
+            
             //calculate secondary ray and update throughput
             Ray scatterRay;
             vec3 atten;
             if(scatter(r, rec, atten, scatterRay))
-            {   //  insert your code here    }
+            {
+                throughput *= atten;
+                r = scatterRay;
+            }
+            else
+            {
+                break; // absorbed
+            }
         
         }
         else  //background
@@ -271,7 +296,7 @@ void main()
         time0,
         time1);
 
-//usa-se o 4 canal de cor para guardar o numero de samples e não o iFrame pois quando se mexe o rato faz-se reset
+    //usa-se o 4 canal de cor para guardar o numero de samples e não o iFrame pois quando se mexe o rato faz-se reset
 
     vec4 prev = texture(iChannel0, gl_FragCoord.xy / iResolution.xy);
     vec3 prevLinear = toLinear(prev.xyz);  
