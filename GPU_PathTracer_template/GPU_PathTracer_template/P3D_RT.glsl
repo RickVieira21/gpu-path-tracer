@@ -196,35 +196,29 @@ bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
     return hit;
 }
 
-vec3 directlighting(pointLight pl, Ray r, HitRecord rec){
-    vec3 diffCol, specCol;
-    vec3 colorOut = vec3(0.0, 0.0, 0.0);
-    float shininess;
-    HitRecord dummy;
+vec3 directlighting(pointLight pl, Ray r, HitRecord rec) {
+    float shininess = 1.0;
+    vec3 normal = normalize(rec.normal);     // Normal da superfície normalizada
 
-    //INSERT YOUR CODE HERE
-    vec3 lightDir = normalize(pl.pos - rec.pos);
-    vec3 viewDir = normalize(-r.d);
-    vec3 reflectDir = reflect(-lightDir, rec.normal);
+    // Pequeno deslocamento do ponto de interseção para evitar autointerseções (acne de sombras)
+    vec3 surfacePos = rec.pos + normal * epsilon;
 
-    float diff = max(dot(rec.normal, lightDir), 0.0);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+    // Vetor da luz: direção da luz do ponto até a luz
+    vec3 toLight = normalize(pl.pos - surfacePos);
 
-    vec3 lightColor = pl.color;
-    
-    // Testa sombra
-    Ray shadowRay = createRay(rec.pos + rec.normal * 0.001, lightDir);
-    if(hit_world(shadowRay, 0.001, length(pl.pos - rec.pos), dummy)) {
-        return vec3(0.0); // Está na sombra
-    }
+    // Componente difusa com modelo de Lambert
+    vec3 diffuse = rec.material.albedo * max(dot(normal, toLight), 0.0);
 
-    // Cálculo final
-    diffCol = rec.material.albedo * diff;
-    specCol = vec3(1.0) * spec; // especular branco simples
-    colorOut = (diffCol + specCol) * lightColor;
+    // Vetor halfway para cálculo especular Blinn-Phong 
+    vec3 halfway = normalize(toLight - r.d);
 
-	return colorOut; 
+    // Cálculo da componente especular simples 
+    vec3 specular = pl.color * rec.material.emissive * pow(max(dot(halfway, normal), 0.0), shininess);
+
+    // Combina iluminação difusa e especular
+    return diffuse + specular;
 }
+
 
 #define MAX_BOUNCES 10
 
@@ -268,6 +262,8 @@ vec3 rayColor(Ray r)
     }
     return col;
 }
+
+
 
 #define MAX_SAMPLES 10000.0
 

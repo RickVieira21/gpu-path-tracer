@@ -132,24 +132,39 @@ Camera createCamera(
     return cam;
 }
 
-// done
-Ray getRay(Camera cam, vec2 pixel_sample)  //rnd pixel_sample viewport coordinates
-{
-    vec2 ls = cam.lensRadius * randomInUnitDisk(gSeed);  //ls - lens sample for DOF
-    float time = cam.time0 + hash1(gSeed) * (cam.time1 - cam.time0);
-    
-    //Calculate eye_offset and ray direction
-    vec3 offset = cam.u * ls.x + cam.v * ls.y;
-    vec3 eye_offset = cam.eye + offset;
+// Gera um raio da câmara para um ponto no plano de imagem, com profundidade de campo
+Ray getRay(Camera cam, vec2 pixelSample) {
+    // Sample aleatório na lente para DOF (profundidade de campo)
+    vec2 lensSample = cam.lensRadius * randomInUnitDisk(gSeed);
 
-    // Calcula o ponto alvo no plano de foco usando as coordenadas do pixel_sample
-    vec3 target = cam.eye - cam.n * cam.focusDist + cam.u * (pixel_sample.x * cam.width)
-                + cam.v * (pixel_sample.y * cam.height);
+    // Tempo aleatório para motion blur
+    float rayTime = cam.time0 + hash1(gSeed) * (cam.time1 - cam.time0);
 
-    vec3 ray_direction = normalize(target - eye_offset);
+    // Distâncias relevantes
+    float d = cam.planeDist;                // distância ao plano de imagem
+    float f = d * cam.focusDist;            // distância ao plano de foco
 
-    return createRay(eye_offset, normalize(ray_direction), time);
+    // Conversão das coordenadas do pixel para o plano de imagem 
+    float px = (pixelSample.x + 0.5) / iResolution.x - 0.5;
+    float py = (pixelSample.y + 0.5) / iResolution.y - 0.5;
+
+    // Ponto no plano de imagem (em coordenadas da câmara)
+    vec3 imagePlanePoint = vec3(px * cam.width, py * cam.height, -d);
+
+    // Converte o ponto para o plano de foco 
+    vec3 focalPoint = imagePlanePoint * cam.focusDist;
+
+    // Deslocamento do olho (camera origin) devido à abertura da lente
+    vec3 eyeOffset = cam.eye + lensSample.x * cam.u + lensSample.y * cam.v;
+
+    // Direção do raio (do olho deslocado para o ponto de foco)
+    vec3 rayDir = (focalPoint.x - lensSample.x) * cam.u
+                + (focalPoint.y - lensSample.y) * cam.v
+                - f * cam.n;
+
+    return Ray(eyeOffset, normalize(rayDir), rayTime);
 }
+
 
 // MT_ material type
 #define MT_DIFFUSE 0
