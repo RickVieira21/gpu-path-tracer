@@ -267,18 +267,29 @@ vec3 rayColor(Ray r)
 }
 
 
-
+#define PI 3.14159265358979
 #define MAX_SAMPLES 10000.0
 
 void main()
 {
     gSeed = float(baseHash(floatBitsToUint(gl_FragCoord.xy))) / float(0xffffffffU) + iTime;
 
+   //Orbital Cam
     vec2 mouse = iMouse.xy / iResolution.xy;
-    mouse.x = mouse.x * 2.0 - 1.0;
+    mouse = clamp(mouse, 0.001, 0.999); // evitar extremos 0 ou 1
 
-    vec3 camPos = vec3(mouse.x * 10.0, mouse.y * 5.0, 8.0);
-    vec3 camTarget = vec3(0.0, 0.0, -1.0);
+    float radius = 10.0 + 6.0 * (1.0 - mouse.y);           // zoom controlado no eixo Y
+    float alpha = mouse.x * 2.0 * PI;                     // ângulo horizontal (órbita)
+    float beta = mix(-PI * 0.25, PI * 0.25, mouse.y);     // ângulo vertical limitado
+
+    vec3 camTarget = vec3(0.0); // centro da cena
+
+    vec3 camPos;
+    camPos.x = camTarget.x + radius * cos(beta) * sin(alpha);
+    camPos.y = camTarget.y + radius * sin(beta);
+    camPos.z = camTarget.z + radius * cos(beta) * cos(alpha);
+
+
     float fovy = 60.0;
     float aperture = 0.0;
     float distToFocus = 1.0;

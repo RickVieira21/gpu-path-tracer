@@ -264,52 +264,51 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         return dot(rScattered.d, rec.normal) > 0.0;
     }
 
-    if (rec.material.type == MT_DIELECTRIC)
+if (rec.material.type == MT_DIELECTRIC)
+{
+    vec3 outwardNormal;
+    float niOverNt;
+    float cosine;
+    vec3 rdNorm = normalize(rIn.d);
+    float dist = rec.t; // distância percorrida até ao ponto de interseção
+
+    bool isInside = dot(rdNorm, rec.normal) > 0.0;
+
+    if (isInside)
     {
-        atten = vec3(1.0);
-        vec3 outwardNormal;
-        float niOverNt;
-        float cosine;
+        outwardNormal = -rec.normal;
+        niOverNt = rec.material.refIdx;
+        cosine = rec.material.refIdx * dot(rdNorm, rec.normal);
+    }
+    else
+    {
+        outwardNormal = rec.normal;
+        niOverNt = 1.0 / rec.material.refIdx;
+        cosine = -dot(rdNorm, rec.normal);
+    }
 
-        vec3 rdNorm = normalize(rIn.d);
+    // Beer’s Law aplicada sempre que houver transmissão
+    atten = exp(-rec.material.refractColor * dist); // *dist?
 
-        if (dot(rdNorm, rec.normal) > 0.0)
-        {
-            outwardNormal = -rec.normal;
-            niOverNt = rec.material.refIdx;
-            cosine = rec.material.refIdx * dot(rdNorm, rec.normal);
+    vec3 refracted = refract(rdNorm, outwardNormal, niOverNt);
+    bool canRefract = length(refracted) > 0.0001;
 
-            float dist = length(rIn.d); // distância percorrida (opcional, se quiseres ajustar)
-            atten = exp(-rec.material.refractColor * dist);
-        }
-        else
-        {
-            outwardNormal = rec.normal;
-            niOverNt = 1.0 / rec.material.refIdx;
-            cosine = -dot(rdNorm, rec.normal);
-        }
+    float reflectProb = canRefract ? schlick(cosine, rec.material.refIdx) : 1.0;
 
-        vec3 refracted = refract(rdNorm, outwardNormal, niOverNt);
-        bool canRefract = length(refracted) > 0.0001;
-
-        float reflectProb = canRefract ? schlick(cosine, rec.material.refIdx) : 1.0;
-
-        if (hash1(gSeed) < reflectProb)
-        {
-            // Reflexão (com rugosidade para dieletricos rugosos)
-            vec3 reflected = reflect(rdNorm, rec.normal);
-            vec3 scatteredDir = normalize(reflected + rec.material.roughness * randomInUnitSphere(gSeed));
-            rScattered = createRay(rec.pos, scatteredDir);
-        }
-        else
-        {
-            // Refração com rugosidade
-            vec3 fuzzedRefracted = normalize(refracted + rec.material.roughness * randomInUnitSphere(gSeed));
-            rScattered = createRay(rec.pos, fuzzedRefracted);
-        }
+    if (hash1(gSeed) < reflectProb)
+    {
+        vec3 reflected = reflect(rdNorm, rec.normal);
+        vec3 scatteredDir = normalize(reflected + rec.material.roughness * randomInUnitSphere(gSeed));
+        rScattered = createRay(rec.pos + rec.normal * epsilon, scatteredDir);
+    }
+    else
+    {
+        vec3 fuzzedRefracted = normalize(refracted + rec.material.roughness * randomInUnitSphere(gSeed));
+        rScattered = createRay(rec.pos - outwardNormal * epsilon, fuzzedRefracted);
+    }
 
         return true;
-    }
+}
 
     return false;
 }
