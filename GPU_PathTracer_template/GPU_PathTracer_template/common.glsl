@@ -296,12 +296,16 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
 
         if (hash1(gSeed) < reflectProb)
         {
+            // Reflexão (com rugosidade para dieletricos rugosos)
             vec3 reflected = reflect(rdNorm, rec.normal);
-            rScattered = createRay(rec.pos, reflected);
+            vec3 scatteredDir = normalize(reflected + rec.material.roughness * randomInUnitSphere(gSeed));
+            rScattered = createRay(rec.pos, scatteredDir);
         }
         else
         {
-            rScattered = createRay(rec.pos, refracted);
+            // Refração com rugosidade
+            vec3 fuzzedRefracted = normalize(refracted + rec.material.roughness * randomInUnitSphere(gSeed));
+            rScattered = createRay(rec.pos, fuzzedRefracted);
         }
 
         return true;
