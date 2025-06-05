@@ -198,24 +198,27 @@ bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
 
 vec3 directlighting(pointLight pl, Ray r, HitRecord rec) {
     float shininess = 1.0;
-    vec3 normal = normalize(rec.normal);     // Normal da superfície normalizada
-
-    // Pequeno deslocamento do ponto de interseção para evitar autointerseções (acne de sombras)
+    vec3 normal = normalize(rec.normal);
     vec3 surfacePos = rec.pos + normal * epsilon;
 
-    // Vetor da luz: direção da luz do ponto até a luz
-    vec3 toLight = normalize(pl.pos - surfacePos);
+    vec3 toLight = pl.pos - surfacePos;
+    float lightDist = length(toLight);
+    vec3 lightDir = normalize(toLight);
 
-    // Componente difusa com modelo de Lambert
-    vec3 diffuse = rec.material.albedo * max(dot(normal, toLight), 0.0);
+    // Shadow ray
+    Ray shadowRay = createRay(surfacePos, lightDir);
+    HitRecord shadowRec;
 
-    // Vetor halfway para cálculo especular Blinn-Phong 
-    vec3 halfway = normalize(toLight - r.d);
+    // Check if something blocks the light
+    if (hit_world(shadowRay, 0.001, lightDist - 0.001, shadowRec)) {
+        return vec3(0.0); // in shadow → no direct lighting
+    }
 
-    // Cálculo da componente especular simples 
+    // If visible, compute light
+    vec3 diffuse = rec.material.albedo * max(dot(normal, lightDir), 0.0);
+    vec3 halfway = normalize(lightDir - r.d);
     vec3 specular = pl.color * rec.material.emissive * pow(max(dot(halfway, normal), 0.0), shininess);
 
-    // Combina iluminação difusa e especular
     return diffuse + specular;
 }
 
