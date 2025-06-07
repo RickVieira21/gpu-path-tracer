@@ -7,7 +7,7 @@
  #include "./common.glsl"
  #iChannel0 "self"
  
- #define SCENE 0
+ #define SCENE 1
 
 bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
 {
@@ -223,46 +223,120 @@ vec3 directlighting(pointLight pl, Ray r, HitRecord rec) {
 }
 
 
+#define SHADOW_SAMPLES 4
+
+vec3 samplePointOnQuad(vec3 A, vec3 B, vec3 C, vec3 D, vec2 uv) {
+    // Bilinear interpolation on quad surface
+    vec3 AB = mix(A, B, uv.x);
+    vec3 DC = mix(D, C, uv.x);
+    return mix(AB, DC, uv.y);
+}
+
+vec3 directLightingEmissiveQuad(vec3 hitPoint, vec3 viewDir, vec3 normal, Material mat)
+{
+    // Only skip direct lighting *on* emissive materials themselves, but allow indirect lighting on others
+    if(length(mat.emissive) > 0.001)
+        return vec3(0.0);
+
+    vec3 A = vec3(-5.0, 12.3, 2.5);
+    vec3 B = vec3(5.0, 12.3, 2.5);
+    vec3 C = vec3(5.0, 12.3, -2.5);
+    vec3 D = vec3(-5.0, 12.3, -2.5);
+    vec3 lightEmission = vec3(1.0, 0.9, 0.9) * 20.0;
+
+    vec3 colorAcc = vec3(0.0);
+    int gridSize = 2; // 2x2 samples for soft shadows
+
+    for (int s = 0; s < gridSize * gridSize; ++s) {
+        int i = s / gridSize;
+        int j = s % gridSize;
+
+        vec2 uv = (vec2(float(i), float(j)) + 0.5) / float(gridSize);
+        vec3 samplePos = samplePointOnQuad(A, B, C, D, uv);
+
+        vec3 lightVec = samplePos - hitPoint;
+        float distToLight = length(lightVec);
+        vec3 lightDir = normalize(lightVec);
+
+        vec3 offsetHitPoint = hitPoint + normal * 0.001;
+
+        Ray shadowRay = createRay(offsetHitPoint, lightDir);
+        HitRecord shadowRec;
+
+        float maxShadowDist = max(distToLight - 0.001, 0.001);
+        bool inShadow = hit_world(shadowRay, 0.001, maxShadowDist, shadowRec);
+
+        if (!inShadow) {
+            float NdotL = max(dot(normal, lightDir), 0.0);
+
+            vec3 halfway = normalize(lightDir + viewDir);
+            float NdotH = max(dot(normal, halfway), 0.0);
+
+            // Map roughness to shininess exponent (simple mapping)
+            float shininess = 1.0 / max(mat.roughness, 0.001);
+            float specularFactor = pow(NdotH, shininess);
+
+            vec3 diffuse = mat.albedo * lightEmission * NdotL;
+            vec3 specular = mat.specColor * lightEmission * specularFactor;
+
+            colorAcc += diffuse + specular;
+        }
+    }
+
+    return colorAcc / float(gridSize * gridSize);
+}
+
+
+
+
 #define MAX_BOUNCES 10
 
 vec3 rayColor(Ray r)
 {
     HitRecord rec;
     vec3 col = vec3(0.0);
-    vec3 throughput = vec3(1.0f, 1.0f, 1.0f);
-    for(int i = 0; i < MAX_BOUNCES; ++i)
-    {
-        if(hit_world(r, 0.001, 10000.0, rec))
-        {
-            //calculate direct lighting with 3 white point lights:
-            col += directlighting(createPointLight(vec3(-10.0, 15.0, 0.0), vec3(1.0)), r, rec) * throughput;
-            col += directlighting(createPointLight(vec3(8.0, 15.0, 3.0), vec3(1.0)), r, rec) * throughput;
-            col += directlighting(createPointLight(vec3(1.0, 15.0, -9.0), vec3(1.0)), r, rec) * throughput;
+    vec3 throughput = vec3(1.0);
 
-            // Emissão (caso o material seja emissivo, como luzes)
+    for (int i = 0; i < MAX_BOUNCES; ++i)
+    {
+        if (hit_world(r, 0.001, 10000.0, rec))
+        {
+            vec3 viewDir = normalize(-r.d);
+
+            //col += directlighting(createPointLight(vec3(-10.0, 15.0, 0.0), vec3(1.0)), r, rec) * throughput;
+            //col += directlighting(createPointLight(vec3(8.0, 15.0, 3.0), vec3(1.0)), r, rec) * throughput;
+            //col += directlighting(createPointLight(vec3(1.0, 15.0, -9.0), vec3(1.0)), r, rec) * throughput;
+
+            vec3 lighting = vec3(0.0);
+            // Add emissive quad lighting with soft shadows
+            lighting += directLightingEmissiveQuad(rec.pos, viewDir, rec.normal, rec.material);
+
+            col += throughput * lighting;
+
+            // Add emission from the material itself
             col += throughput * rec.material.emissive;
-            
-            //calculate secondary ray and update throughput
+
             Ray scatterRay;
-            vec3 atten;
-            if(scatter(r, rec, atten, scatterRay))
+            vec3 attenuation;
+            if (scatter(r, rec, attenuation, scatterRay))
             {
-                throughput *= atten;
+                throughput *= attenuation;
+                if(any(lessThan(throughput, vec3(0.0)))) break; // prevent negative throughput
                 r = scatterRay;
             }
             else
             {
-                break; // absorbed
+                break;
             }
-        
         }
-        else  //background
+        else
         {
             float t = 0.8 * (r.d.y + 1.0);
             col += throughput * mix(vec3(1.0), vec3(0.5, 0.7, 1.0), t);
             break;
         }
     }
+
     return col;
 }
 
@@ -278,7 +352,7 @@ void main()
     vec2 mouse = iMouse.xy / iResolution.xy;
     mouse = clamp(mouse, 0.001, 0.999); // evitar extremos 0 ou 1
 
-    float radius = 10.0 + 6.0 * (1.0 - mouse.y);           // zoom controlado no eixo Y
+    float radius = 40.0 + 6.0 * (1.0 - mouse.y);           // zoom controlado no eixo Y
     float alpha = mouse.x * 2.0 * PI;                     // ângulo horizontal (órbita)
     float beta = mix(-PI * 0.25, PI * 0.25, mouse.y);     // ângulo vertical limitado
 
