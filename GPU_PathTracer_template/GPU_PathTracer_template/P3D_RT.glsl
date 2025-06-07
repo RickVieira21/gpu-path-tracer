@@ -7,7 +7,7 @@
  #include "./common.glsl"
  #iChannel0 "self"
  
- #define SCENE 1
+ #define SCENE 0
 
 bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
 {
@@ -242,7 +242,7 @@ vec3 directLightingEmissiveQuad(vec3 hitPoint, vec3 viewDir, vec3 normal, Materi
     vec3 B = vec3(5.0, 12.3, 2.5);
     vec3 C = vec3(5.0, 12.3, -2.5);
     vec3 D = vec3(-5.0, 12.3, -2.5);
-    vec3 lightEmission = vec3(1.0, 0.9, 0.9) * 20.0;
+    vec3 lightEmission = vec3(1.0, 0.9, 0.9) * 2.0;
 
     vec3 colorAcc = vec3(0.0);
     int gridSize = 2; // 2x2 samples for soft shadows
@@ -352,7 +352,7 @@ void main()
     vec2 mouse = iMouse.xy / iResolution.xy;
     mouse = clamp(mouse, 0.001, 0.999); // evitar extremos 0 ou 1
 
-    float radius = 40.0 + 6.0 * (1.0 - mouse.y);           // zoom controlado no eixo Y
+    float radius = 10.0 + 6.0 * (1.0 - mouse.y);           // zoom controlado no eixo Y
     float alpha = mouse.x * 2.0 * PI;                     // ângulo horizontal (órbita)
     float beta = mix(-PI * 0.25, PI * 0.25, mouse.y);     // ângulo vertical limitado
 

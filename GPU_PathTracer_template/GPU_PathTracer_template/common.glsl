@@ -264,51 +264,63 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         return dot(rScattered.d, rec.normal) > 0.0;
     }
 
-if (rec.material.type == MT_DIELECTRIC)
-{
-    vec3 outwardNormal;
-    float niOverNt;
-    float cosine;
-    vec3 rdNorm = normalize(rIn.d);
-    float dist = rec.t; // distância percorrida até ao ponto de interseção
-
-    bool isInside = dot(rdNorm, rec.normal) > 0.0;
-
-    if (isInside)
+    if (rec.material.type == MT_DIELECTRIC)
     {
-        outwardNormal = -rec.normal;
-        niOverNt = rec.material.refIdx;
-        cosine = rec.material.refIdx * dot(rdNorm, rec.normal);
-    }
-    else
-    {
-        outwardNormal = rec.normal;
-        niOverNt = 1.0 / rec.material.refIdx;
-        cosine = -dot(rdNorm, rec.normal);
-    }
+        vec3 outwardNormal;
+        float niOverNt;
+        float cosine;
+        vec3 rdNorm = normalize(rIn.d);
+        float dist = rec.t;
 
-    // Beer’s Law aplicada sempre que houver transmissão
-    atten = exp(-rec.material.refractColor * dist); // *dist?
+        bool isInside = dot(rdNorm, rec.normal) > 0.0;
 
-    vec3 refracted = refract(rdNorm, outwardNormal, niOverNt);
-    bool canRefract = length(refracted) > 0.0001;
+        if (isInside)
+        {
+            // Raio está a sair do objeto → normal aponta para dentro
+            outwardNormal = -rec.normal;
+            niOverNt = rec.material.refIdx;
 
-    float reflectProb = canRefract ? schlick(cosine, rec.material.refIdx) : 1.0;
+            // cosseno do ângulo de saída deve ser computado no meio transmissivo (θT)
+            // portanto é o cosseno da direção refratada com a normal invertida
+            cosine = dot(rdNorm, rec.normal); // isto ainda é o θI, mas não usamos para a Beer law
+        }
+        else
+        {
+            // Raio está a entrar no objeto → normal padrão
+            outwardNormal = rec.normal;
+            niOverNt = 1.0 / rec.material.refIdx;
 
-    if (hash1(gSeed) < reflectProb)
-    {
-        vec3 reflected = reflect(rdNorm, rec.normal);
-        vec3 scatteredDir = normalize(reflected + rec.material.roughness * randomInUnitSphere(gSeed));
-        rScattered = createRay(rec.pos + rec.normal * epsilon, scatteredDir);
-    }
-    else
-    {
-        vec3 fuzzedRefracted = normalize(refracted + rec.material.roughness * randomInUnitSphere(gSeed));
-        rScattered = createRay(rec.pos - outwardNormal * epsilon, fuzzedRefracted);
-    }
+            cosine = -dot(rdNorm, rec.normal);
+        }
+
+        // Aplicar Beer apenas se estiver DENTRO do meio
+        if (isInside)
+            atten = exp(-rec.material.refractColor * dist);
+        else
+            atten = vec3(1.0);
+
+        vec3 refracted = refract(rdNorm, outwardNormal, niOverNt);
+        bool canRefract = length(refracted) > 0.0001;
+
+        // Usar o cosseno correto: da refratada com a normal
+        float cosThetaT = dot(-normalize(refracted), outwardNormal); 
+        float reflectProb = canRefract ? schlick(cosThetaT, rec.material.refIdx) : 1.0;
+
+        if (hash1(gSeed) < reflectProb)
+        {
+            vec3 reflected = reflect(rdNorm, rec.normal);
+            vec3 scatteredDir = normalize(reflected + rec.material.roughness * randomInUnitSphere(gSeed));
+            rScattered = createRay(rec.pos + rec.normal * epsilon, scatteredDir);
+        }
+        else
+        {
+            vec3 fuzzedRefracted = normalize(refracted + rec.material.roughness * randomInUnitSphere(gSeed));
+            rScattered = createRay(rec.pos - outwardNormal * epsilon, fuzzedRefracted);
+        }
 
         return true;
-}
+    }
+
 
     return false;
 }
@@ -425,50 +437,54 @@ vec3 center(MovingSphere mvsphere, float time)
 }
 
 
-/*
- * The function naming convention changes with these functions to show that they implement a sort of interface for
- * the book's notion of "hittable". E.g. hit_<type>.
- */
-// done
-bool hit_sphere(Sphere s, Ray r, float tmin, float tmax, out HitRecord rec)
+
+// Função que verifica a interseção entre um raio e uma esfera.
+// Se houver interseção válida no intervalo [tMin, tMax], atualiza o HitRecord e retorna true.
+// Caso contrário, retorna false.
+bool hit_sphere(Sphere sph, Ray ray, float tMin, float tMax, inout HitRecord hit)
 {
-    vec3 oc = r.o - s.center;
-    float a = dot(r.d, r.d);
-    float b = dot(oc, r.d);
-    float c = dot(oc, oc) - s.radius * s.radius;
-    float discriminant = b * b - a * c;
+    // Vetor do centro da esfera até à origem do raio
+    vec3 relOrigin = ray.o - sph.center;
 
-    if (discriminant > 0.0) {
-        float sqrtD = sqrt(discriminant);
+    // Termo linear da equação quadrática (sem coeficiente a, pois o raio está normalizado)
+    float a = dot(relOrigin, ray.d);
 
-        float temp = (-b - sqrtD) / a;
-        if (temp < tmax && temp > tmin) {
-            rec.t = temp;
-            rec.pos = pointOnRay(r, rec.t);
-            rec.normal = (rec.pos - s.center) / s.radius;
+    // Discriminante da equação quadrática (sem coeficiente a²)
+    float discriminant = a * a - (dot(relOrigin, relOrigin) - sph.radius * sph.radius);
 
-            // Face normal logic
-            bool frontFace = dot(r.d, rec.normal) < 0.0;
-            rec.normal = frontFace ? rec.normal : -rec.normal;
+    // Se o discriminante for negativo, não há interseção
+    if (discriminant < 0.0) return false;
 
-            return true;
-        }
-        temp = (-b + sqrtD) / a;
+    // Verifica se o raio está fora da esfera inicialmente
+    bool outside = dot(relOrigin, relOrigin) - sph.radius * sph.radius > 0.0;
 
-        if (temp < tmax && temp > tmin) {
-            rec.t = temp;
-            rec.pos = pointOnRay(r, rec.t);
-            rec.normal = (rec.pos - s.center) / s.radius;
+    // Raiz quadrada do discriminante para cálculo da solução da equação
+    float sqrtDisc = sqrt(discriminant);
 
-            // Face normal logic
-            bool frontFace = dot(r.d, rec.normal) < 0.0;
-            rec.normal = frontFace ? rec.normal : -rec.normal;
+    // Escolhe a solução correta da equação (mais próxima, dependendo se está fora ou dentro)
+    float tCandidate = -a + (outside ? -sqrtDisc : sqrtDisc);
 
-            return true;
-        }
-    }
-    return false;
+    // Verifica se o ponto de interseção está dentro dos limites válidos
+    if (tCandidate < tMin || tCandidate > tMax)
+        return false;
+
+    // Calcula a posição e a normal no ponto de interseção
+    vec3 intersection = ray.o + tCandidate * ray.d;
+    vec3 normalVec = normalize(intersection - sph.center);
+
+    // Inverte a normal se o raio intersecta o interior de uma esfera negativa
+    if (sph.radius < 0.0)
+        normalVec = -normalVec;
+
+    // Atualiza os dados do HitRecord
+    hit.t = tCandidate;
+    hit.pos = intersection;
+    hit.normal = normalVec;
+
+    return true;
 }
+
+
 
 // done
 bool hit_movingSphere(MovingSphere s, Ray r, float tmin, float tmax, out HitRecord rec)
