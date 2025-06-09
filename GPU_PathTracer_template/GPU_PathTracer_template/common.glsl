@@ -253,6 +253,34 @@ float schlick(float cosine, float refIdx)
 }
 
 
+vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+float D_GGX(float NoH, float roughness) {
+    float alpha = roughness * roughness;
+    float alpha2 = alpha * alpha;
+    float NoH2 = NoH * NoH;
+    float b = (NoH2 * (alpha2 - 1.0) + 1.0);
+    return alpha2 / (pi * b * b);
+}
+
+float G1_GGX_Schlick(float NoV, float roughness) {
+    // float r = roughness; // original
+    float r = 0.5 + 0.5 * roughness; // Disney remapping
+    float k = (r * r) / 2.0;
+    float denom = NoV * (1.0 - k) + k;
+    return max(NoV, 0.001) / denom;
+}
+
+float G_Smith(float NoV, float NoL, float roughness) {
+    float g1_l = G1_GGX_Schlick(NoL, roughness);
+    float g1_v = G1_GGX_Schlick(NoV, roughness);
+    return g1_l * g1_v;
+}
+
+
+
 bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
 {
     if (rec.material.type == MT_DIFFUSE)
