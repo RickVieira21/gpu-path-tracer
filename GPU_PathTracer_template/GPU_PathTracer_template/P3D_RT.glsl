@@ -7,7 +7,7 @@
  #include "./common.glsl"
  #iChannel0 "self"
  
- #define SCENE 2
+ #define SCENE 1
 
 bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
 {
@@ -228,19 +228,16 @@ vec3 directlighting(pointLight pl, Ray r, HitRecord rec) {
     HitRecord shadowRec;
 
     // Check if something blocks the light
-    if (hit_world(shadowRay, epsilon, lightDist - epsilon, shadowRec)) {
+    if (hit_world(shadowRay, 0.001, lightDist - 0.001, shadowRec)) {
         return vec3(0.0); // in shadow → no direct lighting
     }
 
-    float attenuation = 1.0 / (lightDist * lightDist);
-
+    // If visible, compute light
     vec3 diffuse = rec.material.albedo * max(dot(normal, lightDir), 0.0);
     vec3 halfway = normalize(lightDir - r.d);
     vec3 specular = pl.color * rec.material.emissive * pow(max(dot(halfway, normal), 0.0), shininess);
- 
-    float lightStrength = 100.0; // Try values like 0.1 (dim) to 10.0 (bright)
 
-    return (diffuse + specular) * pl.color * attenuation * lightStrength;
+    return diffuse + specular;
 }
 
 
@@ -263,7 +260,7 @@ vec3 directLightingEmissiveQuad(vec3 hitPoint, vec3 viewDir, vec3 normal, Materi
     vec3 B = vec3(5.0, 12.3, 2.5);
     vec3 C = vec3(5.0, 12.3, -2.5);
     vec3 D = vec3(-5.0, 12.3, -2.5);
-    vec3 lightEmission = vec3(1.0, 0.9, 0.9) * 1.0;
+    vec3 lightEmission = vec3(1.0, 0.9, 0.9) * 2.0;
 
     vec3 colorAcc = vec3(0.0);
     int gridSize = 2; // 2x2 samples for soft shadows
@@ -308,7 +305,7 @@ vec3 directLightingEmissiveQuad(vec3 hitPoint, vec3 viewDir, vec3 normal, Materi
 }
 
 
-#define MAX_BOUNCES 16
+#define MAX_BOUNCES 10
 
 vec3 rayColor(Ray r)
 {
@@ -322,43 +319,46 @@ vec3 rayColor(Ray r)
         {
             vec3 viewDir = normalize(-r.d);
 
-            // col += directlighting(createPointLight(vec3(-10.0, 15.0, 0.0), vec3(1.0)), r, rec) * throughput;
-            // col += directlighting(createPointLight(vec3(8.0, 15.0, 3.0), vec3(1.0)), r, rec) * throughput;
-            // col += directlighting(createPointLight(vec3(0.0, 15.0, -8.0), vec3(1.0)), r, rec) * throughput;
+            //col += directlighting(createPointLight(vec3(-10.0, 15.0, 0.0), vec3(1.0)), r, rec) * throughput;
+            //col += directlighting(createPointLight(vec3(8.0, 15.0, 3.0), vec3(1.0)), r, rec) * throughput;
+            //col += directlighting(createPointLight(vec3(1.0, 15.0, -9.0), vec3(1.0)), r, rec) * throughput;
 
-            col += directlighting(createPointLight(vec3(0.0, .0, -8.0), vec3(1.0)), r, rec) * throughput;
+            //Scene 2 
+            if (SCENE == 2) {
+              col += directlighting(createPointLight(vec3(0.0, .0, -8.0), vec3(1.0)), r, rec) * throughput;
+            }
 
             vec3 lighting = vec3(0.0);
             // Add emissive quad lighting with soft shadows
-            //lighting += directLightingEmissiveQuad(rec.pos, viewDir, rec.normal, rec.material);
+            lighting += directLightingEmissiveQuad(rec.pos, viewDir, rec.normal, rec.material);
+
 
             col += throughput * lighting;
 
             // Add emission from the material itself
             col += throughput * rec.material.emissive;
 
-            // Bounce
-            Ray scattered;
+            Ray scatterRay;
             vec3 attenuation;
-            if (scatter(r, rec, attenuation, scattered))
+            if (scatter(r, rec, attenuation, scatterRay))
             {
                 throughput *= attenuation;
-                r = scattered;
+                if(any(lessThan(throughput, vec3(0.0)))) break; // prevent negative throughput
+                r = scatterRay;
             }
             else
             {
-                // No more bounces — stop
                 break;
             }
         }
         else
         {
-            // Missed → return skybox or black (realistic)
-            vec3 background = mix(vec3(1.0), vec3(0.5, 0.7, 1.0), 0.5 * (r.d.y + 1.0));
-            col += throughput * background;
+            float t = 0.8 * (r.d.y + 1.0);
+            col += throughput * mix(vec3(1.0), vec3(0.5, 0.7, 1.0), t);
             break;
         }
     }
+
     return col;
 }
 
@@ -374,7 +374,12 @@ void main()
     vec2 mouse = iMouse.xy / iResolution.xy;
     mouse = clamp(mouse, 0.001, 0.999); // evitar extremos 0 ou 1
 
-    float radius = 15.0 + 6.0 * (1.0 - mouse.y);           // zoom controlado no eixo Y
+    float radius;
+    if (SCENE == 0 || SCENE == 2)
+        radius = 15.0 + 6.0 * (1.0 - mouse.y);
+    else if (SCENE == 1)
+        radius = 40.0 + 6.0 * (1.0 - mouse.y);
+
     float alpha = mouse.x * 2.0 * PI;                     // ângulo horizontal (órbita)
     float beta = mix(-PI * 0.25, PI * 0.25, mouse.y);     // ângulo vertical limitado
 

@@ -286,14 +286,14 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
     if (rec.material.type == MT_DIFFUSE)
     {
         // Lambertian scatter
-        vec3 scatterDirection = rec.pos + rec.normal + randomUnitVector(gSeed);
+        vec3 scatterDirection =  rec.normal + randomUnitVector(gSeed);
 
         // Corrige caso o vetor seja quase zero
         if (length(scatterDirection) < 1e-8)
             scatterDirection = rec.normal;
 
         rScattered = createRay(rec.pos, scatterDirection);  // <-- usa createRay
-        atten = rec.material.albedo;
+        atten = rec.material.albedo * max(dot(normalize(rScattered.d), rec.normal), 0.0) / 3.141592;
         return true;
     }
 
