@@ -7,7 +7,7 @@
  #include "./common.glsl"
  #iChannel0 "self"
  
- #define SCENE 0
+ #define SCENE 2
 
 bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
 {
@@ -22,7 +22,7 @@ bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
             rec.material = createDiffuseMaterial(vec3(0.2));
         }
 
-        if(hit_sphere(createSphere(vec3(-4.0, 1.0, 0.0), 1.0), r, tmin, rec.t, rec))
+        if(hit_sphere(createSphere(vec3(-4.0, 1.1, 0.0), 1.0), r, tmin, rec.t, rec))
         {
             hit = true;
             rec.material = createDiffuseMaterial(vec3(0.2, 0.95, 0.1));
@@ -51,6 +51,7 @@ bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
         {
             hit = true;
             rec.material = createDielectricMaterial(vec3(0.0, 0.9, 0.9), 1.5, 0.0);
+            //rec.material.emissive = vec3(0.9f,0.0f,0.0f) * 2.0f;
         }
             
         int numxy = 5;
@@ -190,6 +191,23 @@ bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
         }
 
     #elif SCENE == 2
+
+        if(hit_quad(createQuad(vec3(-10.0, 0, 10.0), vec3(10.0, 0, 10.0), vec3(10.0, 0, -10.0), vec3(-10.0, 0, -10.0)), r, tmin, rec.t, rec))
+        {
+            hit = true;
+            rec.material = createDiffuseMaterial(vec3(1));
+        }
+        if(hit_quad(createQuad(vec3(-10, 5, 10), vec3(10, 5, 10), vec3(10.0, 0, 3.0), vec3(-10.0, 0, 3.0)), r, tmin, rec.t, rec))
+        {
+            hit = true;
+            rec.material = createDiffuseMaterial(vec3(1));
+        }
+        if(hit_sphere(createSphere(vec3(0.0, 4.0, 0.0), 3.0),r,tmin,rec.t,rec))
+        {
+            hit = true;
+            rec.material = createDiffuseMaterial(vec3(1.0, .0, .0));
+            //rec.material.emissive = vec3(0.9f,0.0f,0.0f) * 2.0f;
+        }
     #elif SCENE == 3
     #endif
 
@@ -210,16 +228,19 @@ vec3 directlighting(pointLight pl, Ray r, HitRecord rec) {
     HitRecord shadowRec;
 
     // Check if something blocks the light
-    if (hit_world(shadowRay, 0.001, lightDist - 0.001, shadowRec)) {
+    if (hit_world(shadowRay, epsilon, lightDist - epsilon, shadowRec)) {
         return vec3(0.0); // in shadow → no direct lighting
     }
 
-    // If visible, compute light
+    float attenuation = 1.0 / (lightDist * lightDist);
+
     vec3 diffuse = rec.material.albedo * max(dot(normal, lightDir), 0.0);
     vec3 halfway = normalize(lightDir - r.d);
     vec3 specular = pl.color * rec.material.emissive * pow(max(dot(halfway, normal), 0.0), shininess);
+ 
+    float lightStrength = 100.0; // Try values like 0.1 (dim) to 10.0 (bright)
 
-    return diffuse + specular;
+    return (diffuse + specular) * pl.color * attenuation * lightStrength;
 }
 
 
@@ -242,7 +263,7 @@ vec3 directLightingEmissiveQuad(vec3 hitPoint, vec3 viewDir, vec3 normal, Materi
     vec3 B = vec3(5.0, 12.3, 2.5);
     vec3 C = vec3(5.0, 12.3, -2.5);
     vec3 D = vec3(-5.0, 12.3, -2.5);
-    vec3 lightEmission = vec3(1.0, 0.9, 0.9) * 2.0;
+    vec3 lightEmission = vec3(1.0, 0.9, 0.9) * 1.0;
 
     vec3 colorAcc = vec3(0.0);
     int gridSize = 2; // 2x2 samples for soft shadows
@@ -287,9 +308,7 @@ vec3 directLightingEmissiveQuad(vec3 hitPoint, vec3 viewDir, vec3 normal, Materi
 }
 
 
-
-
-#define MAX_BOUNCES 10
+#define MAX_BOUNCES 16
 
 vec3 rayColor(Ray r)
 {
@@ -303,40 +322,43 @@ vec3 rayColor(Ray r)
         {
             vec3 viewDir = normalize(-r.d);
 
-            //col += directlighting(createPointLight(vec3(-10.0, 15.0, 0.0), vec3(1.0)), r, rec) * throughput;
-            //col += directlighting(createPointLight(vec3(8.0, 15.0, 3.0), vec3(1.0)), r, rec) * throughput;
-            //col += directlighting(createPointLight(vec3(1.0, 15.0, -9.0), vec3(1.0)), r, rec) * throughput;
+            // col += directlighting(createPointLight(vec3(-10.0, 15.0, 0.0), vec3(1.0)), r, rec) * throughput;
+            // col += directlighting(createPointLight(vec3(8.0, 15.0, 3.0), vec3(1.0)), r, rec) * throughput;
+            // col += directlighting(createPointLight(vec3(0.0, 15.0, -8.0), vec3(1.0)), r, rec) * throughput;
+
+            col += directlighting(createPointLight(vec3(0.0, .0, -8.0), vec3(1.0)), r, rec) * throughput;
 
             vec3 lighting = vec3(0.0);
             // Add emissive quad lighting with soft shadows
-            lighting += directLightingEmissiveQuad(rec.pos, viewDir, rec.normal, rec.material);
+            //lighting += directLightingEmissiveQuad(rec.pos, viewDir, rec.normal, rec.material);
 
             col += throughput * lighting;
 
             // Add emission from the material itself
             col += throughput * rec.material.emissive;
 
-            Ray scatterRay;
+            // Bounce
+            Ray scattered;
             vec3 attenuation;
-            if (scatter(r, rec, attenuation, scatterRay))
+            if (scatter(r, rec, attenuation, scattered))
             {
                 throughput *= attenuation;
-                if(any(lessThan(throughput, vec3(0.0)))) break; // prevent negative throughput
-                r = scatterRay;
+                r = scattered;
             }
             else
             {
+                // No more bounces — stop
                 break;
             }
         }
         else
         {
-            float t = 0.8 * (r.d.y + 1.0);
-            col += throughput * mix(vec3(1.0), vec3(0.5, 0.7, 1.0), t);
+            // Missed → return skybox or black (realistic)
+            vec3 background = mix(vec3(1.0), vec3(0.5, 0.7, 1.0), 0.5 * (r.d.y + 1.0));
+            col += throughput * background;
             break;
         }
     }
-
     return col;
 }
 
@@ -352,7 +374,7 @@ void main()
     vec2 mouse = iMouse.xy / iResolution.xy;
     mouse = clamp(mouse, 0.001, 0.999); // evitar extremos 0 ou 1
 
-    float radius = 10.0 + 6.0 * (1.0 - mouse.y);           // zoom controlado no eixo Y
+    float radius = 15.0 + 6.0 * (1.0 - mouse.y);           // zoom controlado no eixo Y
     float alpha = mouse.x * 2.0 * PI;                     // ângulo horizontal (órbita)
     float beta = mix(-PI * 0.25, PI * 0.25, mouse.y);     // ângulo vertical limitado
 
