@@ -279,6 +279,26 @@ float G_Smith(float NoV, float NoL, float roughness) {
     return g1_l * g1_v;
 }
 
+vec3 sampleGGX(vec3 V, float roughness, inout uint seed)
+{
+    float a = roughness * roughness;
+
+    float phi = 2.0 * pi * hash1(seed);
+    float cosTheta = sqrt((1.0 - hash1(seed)) / (1.0 + (a*a - 1.0) * hash1(seed)));
+    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+
+    vec3 H = vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+
+    // Transformar H para estar alinhado com a direção V
+    vec3 up = abs(V.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+    vec3 tangentX = normalize(cross(up, V));
+    vec3 tangentY = cross(V, tangentX);
+
+    return normalize(H.x * tangentX + H.y * tangentY + H.z * V);
+}
+
+
+
 
 
 bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
@@ -286,27 +306,85 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
     if (rec.material.type == MT_DIFFUSE)
     {
         // Lambertian scatter
-        vec3 scatterDirection =  rec.normal + randomUnitVector(gSeed);
+        vec3 scatterDirection = rec.normal + randomUnitVector(gSeed);
 
-        // Corrige caso o vetor seja quase zero
         if (length(scatterDirection) < 1e-8)
             scatterDirection = rec.normal;
 
-        rScattered = createRay(rec.pos, scatterDirection);  // <-- usa createRay
+        rScattered = createRay(rec.pos, scatterDirection);
         atten = rec.material.albedo * max(dot(normalize(rScattered.d), rec.normal), 0.0) / 3.141592;
         return true;
     }
 
     if (rec.material.type == MT_METAL)
     {
-        vec3 reflected = reflect(normalize(rIn.d), rec.normal);
-        vec3 scatteredDir = reflected + rec.material.roughness * randomInUnitSphere(gSeed);
+        // Microfacet reflection using GGX
+        vec3 V = normalize(-rIn.d);      // View direction
+        vec3 N = rec.normal;             // Normal
+        float roughness = rec.material.roughness;
 
-        rScattered = createRay(rec.pos, scatteredDir);
-        atten = rec.material.specColor;
+        // Sample half-vector H with GGX
+        vec3 H = sampleGGX(N, roughness, gSeed);
+        vec3 L = reflect(-V, H);         // Reflected direction
 
-        return dot(rScattered.d, rec.normal) > 0.0;
+        // Valid reflection?
+        if (dot(L, N) <= 0.0)
+            return false;
+
+        rScattered = createRay(rec.pos + N * epsilon, normalize(L));
+
+        vec3 F = fresnelSchlick(max(dot(H, V), 0.0), rec.material.specColor);
+        float D = D_GGX(N, H, roughness);
+        float G = G_Smith(N, V, L, roughness);
+
+        vec3 numerator = F * D * G;
+        float denominator = 4.0 * max(dot(N, V), 0.001) * max(dot(N, L), 0.001);
+        atten = numerator / max(denominator, 0.001);
+
+        return true;
     }
+
+    if (rec.material.type == MT_PLASTIC)
+    {
+        vec3 V = normalize(-rIn.d);
+        vec3 N = rec.normal;
+        float roughness = rec.material.roughness;
+
+        // Calcula Fresnel para ponderar a escolha probabilística
+        float cosTheta = max(dot(N, V), 0.0);
+        float fresnel = fresnelSchlick(cosTheta, rec.material.specColor).r;
+
+        if (hash1(gSeed) < fresnel)  // Especular via microfacet GGX
+        {
+            vec3 H = sampleGGX(N, roughness, gSeed);
+            vec3 L = reflect(-V, H);
+
+            if (dot(L, N) <= 0.0)
+                return false;
+
+            rScattered = createRay(rec.pos + N * epsilon, normalize(L));
+
+            vec3 F = fresnelSchlick(max(dot(H, V), 0.0), rec.material.specColor);
+            float D = D_GGX(N, H, roughness);
+            float G = G_Smith(N, V, L, roughness);
+
+            vec3 numerator = F * D * G;
+            float denominator = 4.0 * max(dot(N, V), 0.001) * max(dot(N, L), 0.001);
+            atten = numerator / max(denominator, 0.001);
+        }
+        else // Difuso
+        {
+            vec3 scatterDirection = N + randomUnitVector(gSeed);
+            if (length(scatterDirection) < 1e-8)
+                scatterDirection = N;
+
+            rScattered = createRay(rec.pos + N * epsilon, normalize(scatterDirection));
+            atten = rec.material.diffColor * max(dot(N, rScattered.d), 0.0) / 3.141592;
+        }
+
+        return true;
+    }
+
 
     if (rec.material.type == MT_DIELECTRIC)
     {
@@ -315,29 +393,21 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         float cosine;
         vec3 rdNorm = normalize(rIn.d);
         float dist = rec.t;
-
         bool isInside = dot(rdNorm, rec.normal) > 0.0;
 
         if (isInside)
         {
-            // Raio está a sair do objeto → normal aponta para dentro
             outwardNormal = -rec.normal;
             niOverNt = rec.material.refIdx;
-
-            // cosseno do ângulo de saída deve ser computado no meio transmissivo (θT)
-            // portanto é o cosseno da direção refratada com a normal invertida
-            cosine = dot(rdNorm, rec.normal); // isto ainda é o θI, mas não usamos para a Beer law
+            cosine = dot(rdNorm, rec.normal);
         }
         else
         {
-            // Raio está a entrar no objeto → normal padrão
             outwardNormal = rec.normal;
             niOverNt = 1.0 / rec.material.refIdx;
-
             cosine = -dot(rdNorm, rec.normal);
         }
 
-        // Aplicar Beer apenas se estiver DENTRO do meio
         if (isInside)
             atten = exp(-rec.material.refractColor * dist);
         else
@@ -346,8 +416,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         vec3 refracted = refract(rdNorm, outwardNormal, niOverNt);
         bool canRefract = length(refracted) > 0.0001;
 
-        // Usar o cosseno correto: da refratada com a normal
-        float cosThetaT = dot(-normalize(refracted), outwardNormal); 
+        float cosThetaT = dot(-normalize(refracted), outwardNormal);
         float reflectProb = canRefract ? schlick(cosThetaT, rec.material.refIdx) : 1.0;
 
         if (hash1(gSeed) < reflectProb)
@@ -365,9 +434,10 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         return true;
     }
 
-
     return false;
 }
+
+
 
 
 struct Triangle {vec3 a; vec3 b; vec3 c; };

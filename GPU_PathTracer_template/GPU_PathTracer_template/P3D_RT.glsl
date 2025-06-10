@@ -7,7 +7,7 @@
  #include "./common.glsl"
  #iChannel0 "self"
  
- #define SCENE 1
+ #define SCENE 0
 
 bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
 {
@@ -324,9 +324,8 @@ vec3 rayColor(Ray r)
             //col += directlighting(createPointLight(vec3(1.0, 15.0, -9.0), vec3(1.0)), r, rec) * throughput;
 
             //Scene 2 
-            if (SCENE == 2) {
-              col += directlighting(createPointLight(vec3(0.0, .0, -8.0), vec3(1.0)), r, rec) * throughput;
-            }
+            //col += directlighting(createPointLight(vec3(0.0, .0, -8.0), vec3(1.0)), r, rec) * throughput;
+            
 
             vec3 lighting = vec3(0.0);
             // Add emissive quad lighting with soft shadows
