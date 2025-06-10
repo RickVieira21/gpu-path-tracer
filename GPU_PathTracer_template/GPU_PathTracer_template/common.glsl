@@ -309,25 +309,91 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         // Lambertian scatter
         vec3 scatterDirection = rec.normal + randomUnitVector(gSeed);
 
-        // Corrige caso o vetor seja quase zero
         if (length(scatterDirection) < 1e-8)
             scatterDirection = rec.normal;
 
-        rScattered = createRay(rec.pos, scatterDirection);  // <-- usa createRay
+        rScattered = createRay(rec.pos, scatterDirection);
         atten = rec.material.albedo * max(dot(normalize(rScattered.d), rec.normal), 0.0) / 3.141592;
         return true;
     }
 
     if (rec.material.type == MT_METAL)
     {
-        vec3 reflected = reflect(normalize(rIn.d), rec.normal);
-        vec3 scatteredDir = reflected + rec.material.roughness * randomInUnitSphere(gSeed);
+        // Microfacet reflection using GGX
+        vec3 V = normalize(-rIn.d);      // View direction
+        vec3 N = rec.normal;             // Normal
+        float roughness = rec.material.roughness;
 
-        rScattered = createRay(rec.pos, scatteredDir);
-        atten = rec.material.specColor;
+        // Sample half-vector H with GGX
+        vec3 H = sampleGGX(N, roughness, gSeed);
+        vec3 L = reflect(-V, H);         // Reflected direction
 
-        return dot(rScattered.d, rec.normal) > 0.0;
+        // Valid reflection?
+        if (dot(L, N) <= 0.0)
+            return false;
+
+        rScattered = createRay(rec.pos + N * epsilon, normalize(L));
+        
+        float NoH = max(dot(N, H), 0.001);
+        float NoV = max(dot(N, V), 0.001);
+        float NoL = max(dot(N, L), 0.001);
+
+        vec3 F = fresnelSchlick(max(dot(H, V), 0.0), rec.material.specColor);
+        float D = D_GGX(NoH, roughness);
+        float G = G_Smith(NoV, NoL, roughness);
+
+        vec3 numerator = F * D * G;
+        float denominator = 4.0 * max(dot(N, V), 0.001) * max(dot(N, L), 0.001);
+        atten = numerator / max(denominator, 0.001);
+
+        return true;
     }
+
+    if (rec.material.type == MT_PLASTIC)
+    {
+        vec3 V = normalize(-rIn.d);
+        vec3 N = rec.normal;
+        float roughness = rec.material.roughness;
+
+        // Calcula Fresnel para ponderar a escolha probabilística
+        float cosTheta = max(dot(N, V), 0.0);
+        float fresnel = fresnelSchlick(cosTheta, rec.material.specColor).r;
+
+        if (hash1(gSeed) < fresnel)  // Especular via microfacet GGX
+        {
+            vec3 H = sampleGGX(N, roughness, gSeed);
+            vec3 L = reflect(-V, H);
+
+            if (dot(L, N) <= 0.0)
+                return false;
+
+            rScattered = createRay(rec.pos + N * epsilon, normalize(L));
+
+            float NoH = max(dot(N, H), 0.001);
+            float NoV = max(dot(N, V), 0.001);
+            float NoL = max(dot(N, L), 0.001);
+
+            vec3 F = fresnelSchlick(max(dot(H, V), 0.0), rec.material.specColor);
+            float D = D_GGX(NoH, roughness);
+            float G = G_Smith(NoV, NoL, roughness);
+
+            vec3 numerator = F * D * G;
+            float denominator = 4.0 * max(dot(N, V), 0.001) * max(dot(N, L), 0.001);
+            atten = numerator / max(denominator, 0.001);
+        }
+        else // Difuso
+        {
+            vec3 scatterDirection = N + randomUnitVector(gSeed);
+            if (length(scatterDirection) < 1e-8)
+                scatterDirection = N;
+
+            rScattered = createRay(rec.pos + N * epsilon, normalize(scatterDirection));
+            atten = rec.material.albedo * max(dot(N, rScattered.d), 0.0) / 3.141592;
+        }
+
+        return true;
+    }
+
 
     if (rec.material.type == MT_DIELECTRIC)
     {
@@ -336,29 +402,21 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         float cosine;
         vec3 rdNorm = normalize(rIn.d);
         float dist = rec.t;
-
         bool isInside = dot(rdNorm, rec.normal) > 0.0;
 
         if (isInside)
         {
-            // Raio está a sair do objeto → normal aponta para dentro
             outwardNormal = -rec.normal;
             niOverNt = rec.material.refIdx;
-
-            // cosseno do ângulo de saída deve ser computado no meio transmissivo (θT)
-            // portanto é o cosseno da direção refratada com a normal invertida
-            cosine = dot(rdNorm, rec.normal); // isto ainda é o θI, mas não usamos para a Beer law
+            cosine = dot(rdNorm, rec.normal);
         }
         else
         {
-            // Raio está a entrar no objeto → normal padrão
             outwardNormal = rec.normal;
             niOverNt = 1.0 / rec.material.refIdx;
-
             cosine = -dot(rdNorm, rec.normal);
         }
 
-        // Aplicar Beer apenas se estiver DENTRO do meio
         if (isInside)
             atten = exp(-rec.material.refractColor * dist);
         else
@@ -367,8 +425,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         vec3 refracted = refract(rdNorm, outwardNormal, niOverNt);
         bool canRefract = length(refracted) > 0.0001;
 
-        // Usar o cosseno correto: da refratada com a normal
-        float cosThetaT = dot(-normalize(refracted), outwardNormal); 
+        float cosThetaT = dot(-normalize(refracted), outwardNormal);
         float reflectProb = canRefract ? schlick(cosThetaT, rec.material.refIdx) : 1.0;
 
         if (hash1(gSeed) < reflectProb)
@@ -386,9 +443,9 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         return true;
     }
 
-
     return false;
 }
+
 
 
 
