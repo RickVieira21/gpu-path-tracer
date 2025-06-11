@@ -32,7 +32,8 @@ bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
         if(hit_sphere(createSphere(vec3(4.0, 1.0, 0.0), 1.0),r,tmin,rec.t,rec))
         {
             hit = true;
-            rec.material = createMetalMaterial(vec3(0.8, 0.6, 0.2), 1.0); // bronze
+            rec.material = createMetalMaterial(vec3(0.7, 0.6, 0.5), 0.5); //Original
+            //rec.material = createMetalMaterial(vec3(0.8, 0.6, 0.2), 1.0); // bronze
         }
 
         if(hit_sphere(createSphere(vec3(-1.5, 1.0, 0.0), 1.0),r,tmin,rec.t,rec))
@@ -47,19 +48,21 @@ bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
             rec.material = createDielectricMaterial(vec3(0.0), 1.33, 0.0);
         }
 
-     /*   if(hit_sphere(createSphere(vec3(1.5, 1.0, 0.0), 1.0),r,tmin,rec.t,rec))
+        if(hit_sphere(createSphere(vec3(1.5, 1.0, 0.0), 1.0),r,tmin,rec.t,rec))
         {
             hit = true;
             rec.material = createDielectricMaterial(vec3(0.0, 0.9, 0.9), 1.5, 0.0);
             //rec.material.emissive = vec3(0.9f,0.0f,0.0f) * 2.0f;
-        } */
+        } 
 
-        if(hit_sphere(createSphere(vec3(1.5, 1.0, 0.0), 1.0),r,tmin,rec.t,rec))
+        //PLASTIC SPHERE
+
+        /*   if(hit_sphere(createSphere(vec3(1.5, 1.0, 0.0), 1.0),r,tmin,rec.t,rec))
         {
             hit = true;
             rec.material = createPlasticMaterial(vec3(0.1, 0.0, 0.0), 0.9);
             //rec.material.emissive = vec3(0.9f,0.0f,0.0f) * 2.0f;
-        }
+        } */
             
         int numxy = 5;
         
@@ -222,30 +225,36 @@ bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
 }
 
 vec3 directlighting(pointLight pl, Ray r, HitRecord rec) {
-    float shininess = 1.0;
-    vec3 normal = normalize(rec.normal);
-    vec3 surfacePos = rec.pos + normal * epsilon;
+    float shininess = 1.0; // Define o brilho para o componente especular (Blinn-Phong)
 
-    vec3 toLight = pl.pos - surfacePos;
-    float lightDist = length(toLight);
-    vec3 lightDir = normalize(toLight);
+    vec3 normal = normalize(rec.normal); // Normaliza a normal da superfície
+    vec3 surfacePos = rec.pos + normal * epsilon; // Desloca ligeiramente o ponto para evitar auto-interseções
 
-    // Shadow ray
+    vec3 toLight = pl.pos - surfacePos; // Vetor do ponto da superfície até a luz
+    float lightDist = length(toLight); // Distância até a luz
+    vec3 lightDir = normalize(toLight); // Direção normalizada até à luz
+
+    // Cria um raio de sombra para verificar se há algo entre o ponto e a luz
     Ray shadowRay = createRay(surfacePos, lightDir);
     HitRecord shadowRec;
 
-    // Check if something blocks the light
+    // Verifica se o raio de sombra atinge algum objeto antes da luz
     if (hit_world(shadowRay, 0.001, lightDist - 0.001, shadowRec)) {
-        return vec3(0.0); // in shadow → no direct lighting
+        return vec3(0.0); // Está em sombra → não há iluminação direta
     }
 
-    // If visible, compute light
+    // Cálculo da luz difusa (modelo de Lambert)
     vec3 diffuse = rec.material.albedo * max(dot(normal, lightDir), 0.0);
+
+    // Vetor halfway entre a luz e a vista (modelo Blinn-Phong)
     vec3 halfway = normalize(lightDir - r.d);
+
+    // Cálculo da luz especular
     vec3 specular = pl.color * rec.material.emissive * pow(max(dot(halfway, normal), 0.0), shininess);
 
-    return diffuse + specular;
+    return diffuse + specular; 
 }
+
 
 
 #define SHADOW_SAMPLES 4
@@ -325,65 +334,71 @@ vec3 directLightingEmissiveQuad(vec3 hitPoint, vec3 viewDir, vec3 normal, Materi
 
 vec3 rayColor(Ray r)
 {
-    HitRecord rec;
-    vec3 col = vec3(0.0);
-    vec3 throughput = vec3(1.0);
+    HitRecord rec; // Registo da interseção do raio
+    vec3 col = vec3(0.0); // Cor acumulada
+    vec3 throughput = vec3(1.0); // Acúmulo de energia ao longo dos bounces
 
-    for (int i = 0; i < MAX_BOUNCES; ++i)
+    for (int i = 0; i < MAX_BOUNCES; ++i) 
     {
-        if (hit_world(r, 0.001, 10000.0, rec))
+        if (hit_world(r, 0.001, 10000.0, rec)) // Se o raio atinge algo
         {
-            vec3 viewDir = normalize(-r.d);
+            vec3 viewDir = normalize(-r.d); // Direção da câmara (inversa da direção do raio)
 
+            // Point Lights Scene1
             //col += directlighting(createPointLight(vec3(-10.0, 15.0, 0.0), vec3(1.0)), r, rec) * throughput;
             //col += directlighting(createPointLight(vec3(8.0, 15.0, 3.0), vec3(1.0)), r, rec) * throughput;
             //col += directlighting(createPointLight(vec3(1.0, 15.0, -9.0), vec3(1.0)), r, rec) * throughput;
 
-            //Scene 2 
+            // Scene 2 
             //col += directlighting(createPointLight(vec3(0.0, .0, -8.0), vec3(1.0)), r, rec) * throughput;
-            
 
-            vec3 lighting = vec3(0.0);
-            // Add emissive quad lighting with soft shadows
+            vec3 lighting = vec3(0.0); 
+
+            // Iluminação direta de uma quad emissiva (luz estendida com sombras suaves)
             lighting += directLightingEmissiveQuad(rec.pos, viewDir, rec.normal, rec.material);
 
-
+            // Adiciona iluminação direta com throughput
             col += throughput * lighting;
 
-            // Add emission from the material itself
+            // Adiciona emissão própria do material (ex: se for emissivo)
             col += throughput * rec.material.emissive;
 
-            Ray scatterRay;
-            vec3 attenuation;
-            if (scatter(r, rec, attenuation, scatterRay))
-            {
-                throughput *= attenuation;
-                if(any(lessThan(throughput, vec3(0.0)))) break;
+            Ray scatterRay; // Raio após dispersão
+            vec3 attenuation; // Atenuação da energia (ex: cor absorvida)
 
-                // Peek do próximo bounce, verificar se atingimos algo emissivo diretamente
-                HitRecord nextRec;
+            if (scatter(r, rec, attenuation, scatterRay)) // Se o material dispersar o raio
+            {
+                throughput *= attenuation; // Atualiza throughput com a atenuação
+
+                if(any(lessThan(throughput, vec3(0.0)))) break; // Se for inválido, termina
+
+                HitRecord nextRec; // Registo do próximo bounce
+
+                // Verifica se o próximo bounce atinge uma superfície emissiva
                 if (hit_world(scatterRay, 0.001, 10000.0, nextRec))
                 {
-                    col += throughput * nextRec.material.emissive;
+                    col += throughput * nextRec.material.emissive; // Adiciona luz se for emissiva
                 }
 
-                r = scatterRay;
+                r = scatterRay; // Atualiza raio para o próximo bounce
             }
             else
             {
-                break;
+                break; // Se não dispersar, termina
             }
         }
         else
         {
+            // Se o raio não atingir nada, usa cor de fundo 
             float t = 0.8 * (r.d.y + 1.0);
             col += throughput * mix(vec3(1.0), vec3(0.5, 0.7, 1.0), t);
             break;
         }
     }
 
-    return col;
+    return col; // Retorna a cor acumulada do raio
 }
+
 
 
 #define PI 3.14159265358979

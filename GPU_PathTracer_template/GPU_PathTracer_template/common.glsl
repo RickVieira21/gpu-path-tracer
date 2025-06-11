@@ -361,55 +361,67 @@ vec3 brdfMicrofacet(in vec3 L, in vec3 V, in vec3 N,
 
 bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
 {
+    // ======== DIFUSO (Lambertiano) ========
     if (rec.material.type == MT_DIFFUSE)
     {
-        // Lambertian scatter
+        // Direção de dispersão baseada no modelo Lambertiano: normal + vetor aleatório unitário
         vec3 scatterDirection = rec.normal + randomUnitVector(gSeed);
 
+        // Evita vetores degenerados (muito próximos de zero)
         if (length(scatterDirection) < 1e-8)
             scatterDirection = rec.normal;
 
+        // Raio dispersado é originado na superfície e segue na direção escolhida
         rScattered = createRay(rec.pos, scatterDirection);
+
+        // Atenuação baseada na reflectância difusa (albedo), normalizada por PI (modelo Lambertiano)
         atten = rec.material.albedo * max(dot(normalize(rScattered.d), rec.normal), 0.0) / pi;
         return true;
     }
 
+    // ======== METAL (Reflexão com microfacet) ========
     if (rec.material.type == MT_METAL)
     {
-        vec3 V = normalize(-rIn.d);
+        vec3 V = normalize(-rIn.d);         // Vetor de visualização (do ponto para a câmara)
         vec3 N = rec.normal;
         float roughness = rec.material.roughness;
         vec3 specColor = rec.material.specColor;
 
+        // H é o vetor halfway (entre V e L), amostrado com distribuição GGX para rugosidade
         vec3 H = sampleGGX(V, roughness, gSeed);
+
+        // Calcula L refletindo V em relação a H
         vec3 L = reflect(-V, H); 
 
-
+        // Se L estiver do lado errado da superfície, a reflexão não ocorre
         if (dot(L, N) <= 0.0)
             return false;
 
+        // Cria o raio refletido com pequeno offset para evitar self-intersection
         rScattered = createRay(rec.pos + N * epsilon, normalize(L));
 
-        // baseColor = specColor para metais, metallic = 1.0
+        // Usa BRDF de microfacet com metal (metallic = 1.0, baseColor = specColor)
         atten = brdfMicrofacet(L, V, N, 1.0, roughness, specColor, 1.0) * max(dot(N, L), 0.0);
 
         return true;
     }
 
-
+    // ======== PLÁSTICO (Reflexão + Difuso com Fresnel) ========
     if (rec.material.type == MT_PLASTIC)
     {
-        vec3 V = normalize(-rIn.d); // view direction
+        vec3 V = normalize(-rIn.d);
         vec3 N = rec.normal;
         float roughness = rec.material.roughness;
         vec3 baseColor = rec.material.albedo;
-        float reflectance = rec.material.refIdx; // pode ser 0.04 se quiseres algo fixo
+        float reflectance = rec.material.refIdx; 
 
+        // Cálculo de Fresnel com base na cor especular
         float cosTheta = max(dot(N, V), 0.0);
         float fresnel = fresnelSchlick(cosTheta, rec.material.specColor).r;
 
-        if (hash1(gSeed) < fresnel) // microfacet reflection
+        if (hash1(gSeed) < fresnel)
         {
+            // Reflexão especular com microfacet
             vec3 H = sampleGGX(N, roughness, gSeed);
             vec3 L = reflect(-V, H);
 
@@ -418,11 +430,12 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
 
             rScattered = createRay(rec.pos + N * epsilon, normalize(L));
 
-            // Usa a função genérica para calcular atenuação BRDF
+            // Reflexão especular com BRDF microfacet (metallic = 0.0)
             atten = brdfMicrofacet(L, V, N, 0.0, roughness, baseColor, reflectance) * max(dot(N, L), 0.0);
         }
-        else // difuso
+        else
         {
+            // Reflexão difusa (como Lambert) com randomização
             vec3 scatterDirection = N + randomUnitVector(gSeed);
             if (length(scatterDirection) < 1e-8)
                 scatterDirection = N;
@@ -430,53 +443,61 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
             rScattered = createRay(rec.pos + N * epsilon, normalize(scatterDirection));
             vec3 L = rScattered.d;
 
+            // Atenuação difusa tratada também com BRDF para consistência
             atten = brdfMicrofacet(L, V, N, 0.0, roughness, baseColor, reflectance) * max(dot(N, L), 0.0);
         }
 
         return true;
     }
 
+    // ======== DIELÉTRICO (Transparente: Refração + Reflexão) ========
     if (rec.material.type == MT_DIELECTRIC)
     {
         vec3 outwardNormal;
-        float niOverNt;
+        float niOverNt;     // Razão de índices de refração
         float cosine;
         vec3 rdNorm = normalize(rIn.d);
         float dist = rec.t;
+
+        // Verifica se o raio está dentro do material
         bool isInside = dot(rdNorm, rec.normal) > 0.0;
 
         if (isInside)
         {
             outwardNormal = -rec.normal;
-            niOverNt = rec.material.refIdx;
+            niOverNt = rec.material.refIdx;           // de dentro para fora
             cosine = dot(rdNorm, rec.normal);
         }
         else
         {
             outwardNormal = rec.normal;
-            niOverNt = 1.0 / rec.material.refIdx;
+            niOverNt = 1.0 / rec.material.refIdx;      // de fora para dentro
             cosine = -dot(rdNorm, rec.normal);
         }
 
+        // Atenuação por absorção (apenas quando o raio atravessa o meio)
         if (isInside)
-            atten = exp(-rec.material.refractColor * dist);
+            atten = exp(-rec.material.refractColor * dist); // absorção volumétrica
         else
-            atten = vec3(1.0);
+            atten = vec3(1.0); // sem absorção fora do meio
 
-        vec3 refracted = refract(rdNorm, outwardNormal, niOverNt);
-        bool canRefract = length(refracted) > 0.0001;
+        vec3 refracted = refract(rdNorm, outwardNormal, niOverNt); // tenta calcular o vetor refratado com base na normal e razão dos índices de refração
+        bool canRefract = length(refracted) > 0.0001;              // verifica se foi possível refratar (comprimento próximo de zero indica falha)
 
-        float cosThetaT = dot(-normalize(refracted), outwardNormal);
-        float reflectProb = canRefract ? schlick(cosThetaT, rec.material.refIdx) : 1.0;
+        float cosThetaT = dot(-normalize(refracted), outwardNormal); // calcula o cosseno do ângulo entre o vetor refratado (invertido) e a normal
+        float reflectProb = canRefract ? schlick(cosThetaT, rec.material.refIdx) : 1.0; // usa a aproximação de Schlick para estimar a proporção refletida
+
 
         if (hash1(gSeed) < reflectProb)
         {
+            // Reflexão com fuzziness (se houver rugosidade)
             vec3 reflected = reflect(rdNorm, rec.normal);
             vec3 scatteredDir = normalize(reflected + rec.material.roughness * randomInUnitSphere(gSeed));
             rScattered = createRay(rec.pos + rec.normal * epsilon, scatteredDir);
         }
         else
         {
+            // Refração com fuzziness
             vec3 fuzzedRefracted = normalize(refracted + rec.material.roughness * randomInUnitSphere(gSeed));
             rScattered = createRay(rec.pos - outwardNormal * epsilon, fuzzedRefracted);
         }
@@ -484,8 +505,10 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         return true;
     }
 
+    // Caso o tipo de material não seja reconhecido
     return false;
 }
+
 
 
 
@@ -500,47 +523,53 @@ Triangle createTriangle(vec3 v0, vec3 v1, vec3 v2)
     return t;
 }
 
-// done
+
 bool hit_triangle(Triangle t, Ray r, float tmin, float tmax, out HitRecord rec)
 {
     vec3 v0 = t.a;
     vec3 v1 = t.b;
     vec3 v2 = t.c;
 
+    // Calcula as arestas do triângulo
     vec3 edge1 = v1 - v0;
     vec3 edge2 = v2 - v0;
 
+    // Produto vetorial entre a direção do raio e a segunda aresta
     vec3 h = cross(r.d, edge2);
-    float a = dot(edge1, h);
+    float a = dot(edge1, h); // Determinante do sistema
 
-    //if (abs(a) < 1e-8)
-    //    return false; // Raio paralelo ao triângulo
+    // Comentado: verificação se o raio é paralelo ao triângulo
+    // if (abs(a) < 1e-8) return false;
 
     float f = 1.0 / a;
     vec3 s = r.o - v0;
-    float u = f * dot(s, h);
+    float u = f * dot(s, h); // Coordenada baricêntrica u
 
+    // Verifica se o ponto está fora do triângulo
     if (u < 0.0 || u > 1.0)
         return false;
 
     vec3 q = cross(s, edge1);
-    float v = f * dot(r.d, q);
+    float v = f * dot(r.d, q); // Coordenada baricêntrica v
 
+    // Verifica se a interseção está fora do triângulo
     if (v < 0.0 || u + v > 1.0)
         return false;
 
-    float t_intersect = f * dot(edge2, q);
+    float t_intersect = f * dot(edge2, q); // Distância até à interseção
 
+    // Verifica se está dentro do intervalo válido
     if (t_intersect < tmin || t_intersect > tmax)
         return false;
 
-    // Interseção válida
+    // Interseção válida: preenche o HitRecord
     rec.t = t_intersect;
     rec.pos = r.o + t_intersect * r.d;
-    rec.normal = normalize(cross(edge1, edge2));
+    rec.normal = normalize(cross(edge1, edge2)); // Normal do triângulo
 
     return true;
 }
+
 
 
 
@@ -594,9 +623,10 @@ MovingSphere createMovingSphere(vec3 center0, vec3 center1, float radius, float 
     return s;
 }
 
-// done
+
 vec3 center(MovingSphere mvsphere, float time)
 {
+    // Interpola linearmente a posição da esfera com base no tempo
     float t = (time - mvsphere.time0) / (mvsphere.time1 - mvsphere.time0);
     return mix(mvsphere.center0, mvsphere.center1, clamp(t, 0.0, 1.0));
 }
@@ -650,15 +680,13 @@ bool hit_sphere(Sphere sph, Ray ray, float tMin, float tMax, inout HitRecord hit
 }
 
 
-
-// done
 bool hit_movingSphere(MovingSphere s, Ray r, float tmin, float tmax, out HitRecord rec)
 {
-    // 1. Interpolate the center at the ray's time
+    // 1. Interpola o centro da esfera com base no tempo do raio
     float timeFraction = (r.t - s.time0) / (s.time1 - s.time0);
-    vec3 center = mix(s.center0, s.center1, clamp(timeFraction, 0.0, 1.0));  // Linear interpolation
+    vec3 center = mix(s.center0, s.center1, clamp(timeFraction, 0.0, 1.0));
 
-    // 2. Ray-sphere intersection (same as static sphere)
+    // 2. Interseção raio-esfera (como no caso estático)
     vec3 oc = r.o - center;
     float a = dot(r.d, r.d);
     float b = dot(oc, r.d);
@@ -668,19 +696,21 @@ bool hit_movingSphere(MovingSphere s, Ray r, float tmin, float tmax, out HitReco
     if (discriminant > 0.0) {
         float sqrtD = sqrt(discriminant);
 
+        // Primeira raiz
         float temp = (-b - sqrtD) / a;
         if (temp < tmax && temp > tmin) {
             rec.t = temp;
             rec.pos = pointOnRay(r, rec.t);
             rec.normal = (rec.pos - center) / s.radius;
 
-            // Flip normal if hitting from inside
+            // Ajusta normal se estiver a entrar na esfera
             bool frontFace = dot(r.d, rec.normal) < 0.0;
             rec.normal = frontFace ? rec.normal : -rec.normal;
 
             return true;
         }
 
+        // Segunda raiz (caso a primeira não seja válida)
         temp = (-b + sqrtD) / a;
         if (temp < tmax && temp > tmin) {
             rec.t = temp;
@@ -693,8 +723,10 @@ bool hit_movingSphere(MovingSphere s, Ray r, float tmin, float tmax, out HitReco
             return true;
         }
     }
-    return false;
+
+    return false; // Sem interseção válida
 }
+
 
 struct pointLight {
     vec3 pos;
