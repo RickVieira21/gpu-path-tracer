@@ -256,81 +256,104 @@ float schlick(float cosine, float refIdx)
 
 //MICROFACETS
 
+// Fresnel-Schlick: aproximação eficiente da equação de Fresnel
+// cosTheta: cosseno do ângulo entre a normal e o vetor de visão (V.H)
+// F0: refletância no ângulo normal de incidência (0º), tipicamente 0.04 para dielétricos, ou a cor metálica para metais
 vec3 fresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
+
+// D_GGX: função de distribuição normal (NDF) para o modelo GGX 
+// NoH: cosseno entre a normal da superfície (N) e o vetor H (half-way entre L e V)
+// roughness: rugosidade do material (entre 0 e 1)
 float D_GGX(float NoH, float roughness) {
-    float alpha = roughness * roughness;
-    float alpha2 = alpha * alpha;
-    float NoH2 = NoH * NoH;
-    float b = (NoH2 * (alpha2 - 1.0) + 1.0);
-    return alpha2 / (pi * b * b);
+    float alpha = roughness * roughness;    // converte rugosidade perceptual para "alpha"
+    float alpha2 = alpha * alpha;           // alpha ao quadrado
+    float NoH2 = NoH * NoH;                 // cos^2 entre N e H
+    float b = (NoH2 * (alpha2 - 1.0) + 1.0); // denom. comum
+    return alpha2 / (pi * b * b);           // distribuição GGX normalizada
 }
 
+
+// G1_GGX_Schlick: aproximação da função de geometria de visibilidade para um dos lados (L ou V)
+// NoV: cosseno entre N e o vetor de visão ou luz
 float G1_GGX_Schlick(float NoV, float roughness) {
-    // float r = roughness; // original
-    float r = 0.5 + 0.5 * roughness; // Disney remapping
-    float k = (r * r) / 2.0;
-    float denom = NoV * (1.0 - k) + k;
-    return max(NoV, 0.001) / denom;
+    float r = 0.5 + 0.5 * roughness;
+    float k = (r * r) / 2.0;                // fator de suavização
+    float denom = NoV * (1.0 - k) + k;      // denom. de Schlick
+    return max(NoV, 0.001) / denom;         // evita divisões por zero
 }
 
+
+// G_Smith: função de geometria completa (Smith) para GGX
+// Combina os dois lados (visão e luz) com a aproximação de Schlick
 float G_Smith(float NoV, float NoL, float roughness) {
-    float g1_l = G1_GGX_Schlick(NoL, roughness);
-    float g1_v = G1_GGX_Schlick(NoV, roughness);
-    return g1_l * g1_v;
+    float g1_l = G1_GGX_Schlick(NoL, roughness); // lado da luz
+    float g1_v = G1_GGX_Schlick(NoV, roughness); // lado da visão
+    return g1_l * g1_v; // visibilidade combinada
 }
 
+
+// sampleGGX: gera um vetor H amostrado segundo a distribuição GGX
+// (ou seja vetor médio entre o vetor de visão V (direção da câmara) e o vetor da luz L)
+// V: vetor de visão (normalizado, apontando para a câmara)
 vec3 sampleGGX(vec3 V, float roughness, inout float seed)
 {
-    float a = roughness * roughness;
+    float a = roughness * roughness; // alpha (rugosidade convertida)
 
-    float phi = 2.0 * pi * hash1(seed);
-    float cosTheta = sqrt((1.0 - hash1(seed)) / (1.0 + (a*a - 1.0) * hash1(seed)));
-    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+    // Gera coordenadas esféricas (phi, theta) segundo GGX
+    float phi = 2.0 * pi * hash1(seed); // ângulo aleatório
+    float cosTheta = sqrt((1.0 - hash1(seed)) / (1.0 + (a*a - 1.0) * hash1(seed))); // GGX theta
+    float sinTheta = sqrt(1.0 - cosTheta * cosTheta); // sen de theta 
 
+    // Converte coordenadas esféricas para vetor no espaço local (tangente ao V)
     vec3 H = vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
 
-    // Transformar H para estar alinhado com a direção V
-    vec3 up = abs(V.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
-    vec3 tangentX = normalize(cross(up, V));
-    vec3 tangentY = cross(V, tangentX);
+    // Cria uma base ortonormal em torno de V para transformar H
+    // Isto permite amostrar H no hemisfério orientado pela direção V
+    vec3 up = abs(V.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0); // evita degenerescência
+    vec3 tangentX = normalize(cross(up, V));   // primeiro vetor tangente
+    vec3 tangentY = cross(V, tangentX);        // segundo vetor tangente ortogonal
 
+    // Converte H do espaço tangente para o espaço do mundo (orientado por V)
     return normalize(H.x * tangentX + H.y * tangentY + H.z * V);
 }
+
 
 vec3 brdfMicrofacet(in vec3 L, in vec3 V, in vec3 N,
                     in float metallic, in float roughness,
                     in vec3 baseColor, in float reflectance)
 {
+    // Halfway vector entre V e L
     vec3 H = normalize(V + L);
 
-    // Dot products entre vetores
-    float NoV = clamp(dot(N, V), 0.0, 1.0);
-    float NoL = clamp(dot(N, L), 0.0, 1.0);
-    float NoH = clamp(dot(N, H), 0.0, 1.0);
-    float VoH = clamp(dot(V, H), 0.0, 1.0);
+    // Produtos escalares relevantes para a BRDF
+    float NoV = clamp(dot(N, V), 0.0, 1.0);  // cos(θ_view)
+    float NoL = clamp(dot(N, L), 0.0, 1.0);  // cos(θ_light)
+    float NoH = clamp(dot(N, H), 0.0, 1.0);  // cos(θ_half)
+    float VoH = clamp(dot(V, H), 0.0, 1.0);  // cos(θ_fresnel)
 
-    // F0 é a refletância no ângulo normal
-    vec3 f0 = vec3(0.16) * (reflectance * reflectance); // 0.04 = (0.2)^2
-    f0 = mix(f0, baseColor, metallic);
+    // F0: refletância na incidência normal (usada no fresnel)
+    vec3 f0 = vec3(0.16) * (reflectance * reflectance);  // ex: 0.04 para plásticos
+    f0 = mix(f0, baseColor, metallic); // metais usam baseColor como F0
 
-    // Fresnel, distribuição e geometria
-    vec3 F = fresnelSchlick(VoH, f0);
-    float D = D_GGX(NoH, roughness);
-    float G = G_Smith(NoV, NoL, roughness);
+    // Termos da BRDF especular de Cook-Torrance
+    vec3 F = fresnelSchlick(VoH, f0);         // Fresnel (reflexão angular)
+    float D = D_GGX(NoH, roughness);          // Distribuição de microfacetos (GGX)
+    float G = G_Smith(NoV, NoL, roughness);   // Termo de geometria (oclusão)
 
-    // Componente especular
+    // Componente especular final
     vec3 spec = (F * D * G) / (4.0 * max(NoV, 0.001) * max(NoL, 0.001));
 
-    // Componente difusa (só se não for metal)
-    vec3 rhoD = baseColor;
-    rhoD *= (1.0 - metallic);
-    vec3 diff = rhoD * RECIPROCAL_PI;
+    // Componente difusa (zero para metais)
+    vec3 rhoD = baseColor * (1.0 - metallic); // sem difuso para metal
+    vec3 diff = rhoD * RECIPROCAL_PI;         // lambertiano: 1/π
 
+    // BRDF = difusa + especular
     return diff + spec;
 }
+
 
 
 
