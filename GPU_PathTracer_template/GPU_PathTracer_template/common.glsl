@@ -370,7 +370,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
             scatterDirection = rec.normal;
 
         rScattered = createRay(rec.pos, scatterDirection);
-        atten = rec.material.albedo * max(dot(normalize(rScattered.d), rec.normal), 0.0) / 3.141592;
+        atten = rec.material.albedo * max(dot(normalize(rScattered.d), rec.normal), 0.0) / pi;
         return true;
     }
 
@@ -381,7 +381,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         float roughness = rec.material.roughness;
         vec3 specColor = rec.material.specColor;
 
-        vec3 H = sampleGGX(N, roughness, gSeed);
+        vec3 H = sampleGGX(V, roughness, gSeed);
         vec3 L = reflect(-V, H); 
 
 

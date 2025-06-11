@@ -32,7 +32,7 @@ bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
         if(hit_sphere(createSphere(vec3(4.0, 1.0, 0.0), 1.0),r,tmin,rec.t,rec))
         {
             hit = true;
-            rec.material = createMetalMaterial(vec3(0.7, 0.6, 0.5), 0.5);
+            rec.material = createMetalMaterial(vec3(0.8, 0.6, 0.2), 1.0); // bronze
         }
 
         if(hit_sphere(createSphere(vec3(-1.5, 1.0, 0.0), 1.0),r,tmin,rec.t,rec))
@@ -298,11 +298,20 @@ vec3 directLightingEmissiveQuad(vec3 hitPoint, vec3 viewDir, vec3 normal, Materi
             float NdotH = max(dot(normal, halfway), 0.0);
 
             // Map roughness to shininess exponent (simple mapping)
-            float shininess = 1.0 / max(mat.roughness, 0.001);
+            float shininess = mix(8.0, 128.0, 1.0 - mat.roughness);
             float specularFactor = pow(NdotH, shininess);
 
-            vec3 diffuse = mat.albedo * lightEmission * NdotL;
-            vec3 specular = mat.specColor * lightEmission * specularFactor;
+            vec3 diffuse = vec3(0.0);
+            vec3 specular = vec3(0.0);
+
+            if (mat.type == MT_DIFFUSE || mat.type == MT_PLASTIC) {
+                diffuse = mat.albedo * lightEmission * NdotL;
+                specular = mat.specColor * lightEmission * specularFactor;
+            }
+            else if (mat.type == MT_METAL) { // Nenhuma componente difusa
+                vec3 F = fresnelSchlick(dot(halfway, viewDir), mat.specColor);
+                specular = F * lightEmission * specularFactor * NdotL;
+            }
 
             colorAcc += diffuse + specular;
         }
@@ -349,7 +358,15 @@ vec3 rayColor(Ray r)
             if (scatter(r, rec, attenuation, scatterRay))
             {
                 throughput *= attenuation;
-                if(any(lessThan(throughput, vec3(0.0)))) break; // prevent negative throughput
+                if(any(lessThan(throughput, vec3(0.0)))) break;
+
+                // Peek do próximo bounce, verificar se atingimos algo emissivo diretamente
+                HitRecord nextRec;
+                if (hit_world(scatterRay, 0.001, 10000.0, nextRec))
+                {
+                    col += throughput * nextRec.material.emissive;
+                }
+
                 r = scatterRay;
             }
             else
