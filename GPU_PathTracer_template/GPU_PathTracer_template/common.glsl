@@ -356,9 +356,120 @@ vec3 brdfMicrofacet(in vec3 L, in vec3 V, in vec3 N,
 
 
 
+// Old scatter: calcula a dispersão do raio com base no tipo de material
+bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
+{
+    // --- Difuso Lambertiano ---
+    if (rec.material.type == MT_DIFFUSE)
+    {
+        // Calcula uma direção de dispersão aleatória a partir da normal (Lambertian)
+        vec3 scatterDirection = rec.normal + randomUnitVector(gSeed);
+
+        // Evita direções próximas de zero (artefatos)
+        if (length(scatterDirection) < 1e-8)
+            scatterDirection = rec.normal;
+
+        // Cria o novo raio disperso a partir da posição da interseção
+        rScattered = createRay(rec.pos, scatterDirection);
+
+        // Atenuação da energia com base no albedo e no ângulo entre o raio e a normal
+        atten = rec.material.albedo * max(dot(normalize(rScattered.d), rec.normal), 0.0) / 3.141592;
+
+        return true; // O raio foi disperso
+    }
+
+    // --- Metal (reflexão com rugosidade) ---
+    if (rec.material.type == MT_METAL)
+    {
+        // Calcula o vetor refletido
+        vec3 reflected = reflect(normalize(rIn.d), rec.normal);
+
+        // Adiciona ruído baseado na rugosidade → cria "fuzziness"
+        vec3 scatteredDir = reflected + rec.material.roughness * randomInUnitSphere(gSeed);
+
+        // Cria o raio refletido a partir da posição da interseção
+        rScattered = createRay(rec.pos, scatteredDir);
+
+        // Atenuação com a cor especular do material
+        atten = rec.material.specColor;
+
+        // Só reflete se estiver a sair da superfície (dot positivo com a normal)
+        return dot(rScattered.d, rec.normal) > 0.0;
+    }
+
+    // --- Dielétrico ---
+    if (rec.material.type == MT_DIELECTRIC)
+    {
+        vec3 outwardNormal;
+        float niOverNt;
+        float cosine;
+        vec3 rdNorm = normalize(rIn.d); // Direção normalizada do raio de entrada
+        float dist = rec.t; // Distância percorrida até ao ponto de interseção
+
+        // Verifica se o raio está dentro ou fora do meio
+        bool isInside = dot(rdNorm, rec.normal) > 0.0;
+
+        if (isInside)
+        {
+            // O raio está a sair do meio → invertendo a normal
+            outwardNormal = -rec.normal;
+            niOverNt = rec.material.refIdx; // Índice de refração do meio
+
+            cosine = dot(rdNorm, rec.normal); // Coseno do ângulo de incidência
+        }
+        else
+        {
+            // O raio está a entrar no meio → normal permanece
+            outwardNormal = rec.normal;
+            niOverNt = 1.0 / rec.material.refIdx; // Ar para meio refrativo
+
+            cosine = -dot(rdNorm, rec.normal);
+        }
+
+        // Aplica a lei de Beer para absorção se estiver dentro do meio
+        if (isInside)
+            atten = exp(-rec.material.refractColor * dist); // Atenuação exponencial
+        else
+            atten = vec3(1.0); // Sem atenuação ao entrar no meio
+
+        // Tenta calcular o vetor refratado
+        vec3 refracted = refract(rdNorm, outwardNormal, niOverNt);
+        bool canRefract = length(refracted) > 0.0001; // Confirma que refratou
+
+        // Coseno do ângulo da refratada com a normal externa (para Schlick)
+        float cosThetaT = dot(-normalize(refracted), outwardNormal); 
+
+        // Usa aproximação de Schlick para refletividade
+        float reflectProb = canRefract ? schlick(cosThetaT, rec.material.refIdx) : 1.0;
+
+        // Escolhe entre refletir ou refratar com base numa amostra aleatória
+        if (hash1(gSeed) < reflectProb)
+        {
+            // Reflete com rugosidade
+            vec3 reflected = reflect(rdNorm, rec.normal);
+            vec3 scatteredDir = normalize(reflected + rec.material.roughness * randomInUnitSphere(gSeed));
+
+            // Cria o raio refletido ligeiramente afastado da superfície
+            rScattered = createRay(rec.pos + rec.normal * epsilon, scatteredDir);
+        }
+        else
+        {
+            // Refrata com alguma rugosidade (fuzzing)
+            vec3 fuzzedRefracted = normalize(refracted + rec.material.roughness * randomInUnitSphere(gSeed));
+
+            // Cria o raio refratado ligeiramente para dentro
+            rScattered = createRay(rec.pos - outwardNormal * epsilon, fuzzedRefracted);
+        }
+
+        return true; // Raio foi disperso (refletido ou refratado)
+    }
+
+    return false;
+}
 
 
-
+//New Scatter 
+/*
 bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
 {
     // ======== DIFUSO (Lambertiano) ========
@@ -508,7 +619,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
     // Caso o tipo de material não seja reconhecido
     return false;
 }
-
+*/
 
 
 
