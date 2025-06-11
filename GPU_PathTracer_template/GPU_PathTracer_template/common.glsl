@@ -5,6 +5,7 @@
 
 const float pi = 3.14159265358979;
 const float epsilon = 0.001;
+const float RECIPROCAL_PI = 1.0 / 3.141592653589793;
 
 struct Ray {
     vec3 o;     // origin
@@ -299,6 +300,39 @@ vec3 sampleGGX(vec3 V, float roughness, inout float seed)
     return normalize(H.x * tangentX + H.y * tangentY + H.z * V);
 }
 
+vec3 brdfMicrofacet(in vec3 L, in vec3 V, in vec3 N,
+                    in float metallic, in float roughness,
+                    in vec3 baseColor, in float reflectance)
+{
+    vec3 H = normalize(V + L);
+
+    // Dot products entre vetores
+    float NoV = clamp(dot(N, V), 0.0, 1.0);
+    float NoL = clamp(dot(N, L), 0.0, 1.0);
+    float NoH = clamp(dot(N, H), 0.0, 1.0);
+    float VoH = clamp(dot(V, H), 0.0, 1.0);
+
+    // F0 é a refletância no ângulo normal
+    vec3 f0 = vec3(0.16) * (reflectance * reflectance); // 0.04 = (0.2)^2
+    f0 = mix(f0, baseColor, metallic);
+
+    // Fresnel, distribuição e geometria
+    vec3 F = fresnelSchlick(VoH, f0);
+    float D = D_GGX(NoH, roughness);
+    float G = G_Smith(NoV, NoL, roughness);
+
+    // Componente especular
+    vec3 spec = (F * D * G) / (4.0 * max(NoV, 0.001) * max(NoL, 0.001));
+
+    // Componente difusa (só se não for metal)
+    vec3 rhoD = baseColor;
+    rhoD *= (1.0 - metallic);
+    vec3 diff = rhoD * RECIPROCAL_PI;
+
+    return diff + spec;
+}
+
+
 
 
 
@@ -319,47 +353,39 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
 
     if (rec.material.type == MT_METAL)
     {
-        // Microfacet reflection using GGX
-        vec3 V = normalize(-rIn.d);      // View direction
-        vec3 N = rec.normal;             // Normal
+        vec3 V = normalize(-rIn.d);
+        vec3 N = rec.normal;
         float roughness = rec.material.roughness;
+        vec3 specColor = rec.material.specColor;
 
-        // Sample half-vector H with GGX
         vec3 H = sampleGGX(N, roughness, gSeed);
-        vec3 L = reflect(-V, H);         // Reflected direction
+        vec3 L = reflect(-V, H); 
 
-        // Valid reflection?
+
         if (dot(L, N) <= 0.0)
             return false;
 
         rScattered = createRay(rec.pos + N * epsilon, normalize(L));
-        
-        float NoH = max(dot(N, H), 0.001);
-        float NoV = max(dot(N, V), 0.001);
-        float NoL = max(dot(N, L), 0.001);
 
-        vec3 F = fresnelSchlick(max(dot(H, V), 0.0), rec.material.specColor);
-        float D = D_GGX(NoH, roughness);
-        float G = G_Smith(NoV, NoL, roughness);
-
-        vec3 numerator = F * D * G;
-        float denominator = 4.0 * max(dot(N, V), 0.001) * max(dot(N, L), 0.001);
-        atten = numerator / max(denominator, 0.001);
+        // baseColor = specColor para metais, metallic = 1.0
+        atten = brdfMicrofacet(L, V, N, 1.0, roughness, specColor, 1.0) * max(dot(N, L), 0.0);
 
         return true;
     }
 
+
     if (rec.material.type == MT_PLASTIC)
     {
-        vec3 V = normalize(-rIn.d);
+        vec3 V = normalize(-rIn.d); // view direction
         vec3 N = rec.normal;
         float roughness = rec.material.roughness;
+        vec3 baseColor = rec.material.albedo;
+        float reflectance = rec.material.refIdx; // pode ser 0.04 se quiseres algo fixo
 
-        // Calcula Fresnel para ponderar a escolha probabilística
         float cosTheta = max(dot(N, V), 0.0);
         float fresnel = fresnelSchlick(cosTheta, rec.material.specColor).r;
 
-        if (hash1(gSeed) < fresnel)  // Especular via microfacet GGX
+        if (hash1(gSeed) < fresnel) // microfacet reflection
         {
             vec3 H = sampleGGX(N, roughness, gSeed);
             vec3 L = reflect(-V, H);
@@ -369,31 +395,23 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
 
             rScattered = createRay(rec.pos + N * epsilon, normalize(L));
 
-            float NoH = max(dot(N, H), 0.001);
-            float NoV = max(dot(N, V), 0.001);
-            float NoL = max(dot(N, L), 0.001);
-
-            vec3 F = fresnelSchlick(max(dot(H, V), 0.0), rec.material.specColor);
-            float D = D_GGX(NoH, roughness);
-            float G = G_Smith(NoV, NoL, roughness);
-
-            vec3 numerator = F * D * G;
-            float denominator = 4.0 * max(dot(N, V), 0.001) * max(dot(N, L), 0.001);
-            atten = numerator / max(denominator, 0.001);
+            // Usa a função genérica para calcular atenuação BRDF
+            atten = brdfMicrofacet(L, V, N, 0.0, roughness, baseColor, reflectance) * max(dot(N, L), 0.0);
         }
-        else // Difuso
+        else // difuso
         {
             vec3 scatterDirection = N + randomUnitVector(gSeed);
             if (length(scatterDirection) < 1e-8)
                 scatterDirection = N;
 
             rScattered = createRay(rec.pos + N * epsilon, normalize(scatterDirection));
-            atten = rec.material.albedo * max(dot(N, rScattered.d), 0.0) / 3.141592;
+            vec3 L = rScattered.d;
+
+            atten = brdfMicrofacet(L, V, N, 0.0, roughness, baseColor, reflectance) * max(dot(N, L), 0.0);
         }
 
         return true;
     }
-
 
     if (rec.material.type == MT_DIELECTRIC)
     {

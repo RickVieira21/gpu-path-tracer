@@ -32,7 +32,7 @@ bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
         if(hit_sphere(createSphere(vec3(4.0, 1.0, 0.0), 1.0),r,tmin,rec.t,rec))
         {
             hit = true;
-            rec.material = createMetalMaterial(vec3(0.7, 0.6, 0.5), 0.0);
+            rec.material = createMetalMaterial(vec3(0.7, 0.6, 0.5), 0.5);
         }
 
         if(hit_sphere(createSphere(vec3(-1.5, 1.0, 0.0), 1.0),r,tmin,rec.t,rec))
@@ -47,10 +47,17 @@ bool hit_world(Ray r, float tmin, float tmax, inout HitRecord rec)
             rec.material = createDielectricMaterial(vec3(0.0), 1.33, 0.0);
         }
 
-        if(hit_sphere(createSphere(vec3(1.5, 1.0, 0.0), 1.0),r,tmin,rec.t,rec))
+     /*   if(hit_sphere(createSphere(vec3(1.5, 1.0, 0.0), 1.0),r,tmin,rec.t,rec))
         {
             hit = true;
             rec.material = createDielectricMaterial(vec3(0.0, 0.9, 0.9), 1.5, 0.0);
+            //rec.material.emissive = vec3(0.9f,0.0f,0.0f) * 2.0f;
+        } */
+
+        if(hit_sphere(createSphere(vec3(1.5, 1.0, 0.0), 1.0),r,tmin,rec.t,rec))
+        {
+            hit = true;
+            rec.material = createPlasticMaterial(vec3(0.1, 0.0, 0.0), 0.9);
             //rec.material.emissive = vec3(0.9f,0.0f,0.0f) * 2.0f;
         }
             
